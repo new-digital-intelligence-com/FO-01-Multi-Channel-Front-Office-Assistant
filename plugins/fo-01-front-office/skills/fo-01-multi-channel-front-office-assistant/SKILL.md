@@ -1,5 +1,5 @@
 ---
-name: front-office
+name: fo-01-multi-channel-front-office-assistant
 description: FO-01 multi-channel front office assistant. Use whenever the user wants to handle an inbound customer request on Slack or Google Chat — answer an FAQ about hours, location, pricing, lead times, booking or service scope; draft a reply in the company voice; qualify a new enquiry; escalate a complaint, refund or anything contractual to the right human team with full context; look up what a customer asked before; or review which escalations are still open.
 ---
 
@@ -10,7 +10,7 @@ one record. Wired today: **Slack** (one channel) and **Google Chat** (one space)
 
 ## Before anything else
 
-**Read [references/contract.md](references/contract.md).** It is the behaviour contract —
+**Read [references/rules.md](references/rules.md).** It is the behaviour contract —
 brand voice, what we answer directly, qualifying rules, escalation triggers, honesty rules.
 The FO-01 server reads this same file on every request and a build step fails if the copies
 differ, so a reply drafted here and one drafted by the server come out the same. When the

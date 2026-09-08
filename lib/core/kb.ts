@@ -3,7 +3,7 @@
  * source later without touching the tool layer.
  *
  * Rule that matters: if nothing matches, the caller must escalate rather than improvise.
- * See lib/core/contract.md, "What we answer directly".
+ * See lib/core/rules.md, "What we answer directly".
  */
 export interface Entry {
   id: string;
@@ -60,7 +60,7 @@ export interface Match {
 }
 
 /**
- * Escalation triggers, from contract.md. These OVERRIDE the FAQ lookup: a refund question
+ * Escalation triggers, from rules.md. These OVERRIDE the FAQ lookup: a refund question
  * that happens to share words with an FAQ entry must still escalate, never be answered.
  * Matched as substrings so inflections ("refunded", "cancelling") are caught.
  */

@@ -42,7 +42,7 @@ export interface ToolDef {
   run: (input: any) => Promise<ToolAnswer>;
 }
 
-export const CONTRACT = readFileSync(join(process.cwd(), "lib/core/contract.md"), "utf8");
+export const CONTRACT = readFileSync(join(process.cwd(), "lib/core/rules.md"), "utf8");
 
 export const TOOLS: ToolDef[] = [
   {

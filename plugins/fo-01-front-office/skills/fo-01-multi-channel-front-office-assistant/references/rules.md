@@ -1,4 +1,4 @@
-# Front office operating contract
+# The behaviour contract
 
 The behaviour contract for this organisation, shared by every surface. Claude loads it
 through the `front-office` skill; the server injects this same file into the system prompt

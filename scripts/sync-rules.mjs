@@ -1,13 +1,13 @@
 /**
  * Copies the behaviour contract into the plugin so the skill ships a byte-identical copy.
  *
- * lib/core/contract.md is the original. The server reads it directly; the plugin gets this
+ * lib/core/rules.md is the original. The server reads it directly; the plugin gets this
  * copy. Run after editing the contract. `--check` fails instead of writing, for CI.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const SRC = "lib/core/contract.md";
-const DST = "plugin/skills/front-office/references/contract.md";
+const SRC = "lib/core/rules.md";
+const DST = "plugins/fo-01-front-office/skills/fo-01-multi-channel-front-office-assistant/references/rules.md";
 
 const src = readFileSync(SRC, "utf8");
 let dst = null;

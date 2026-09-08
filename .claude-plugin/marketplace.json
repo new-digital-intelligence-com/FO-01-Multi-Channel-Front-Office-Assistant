@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ndi-front-office",
+  "owner": {
+    "name": "New Digital Intelligence",
+    "url": "https://new-digital-intelligence.com"
+  },
+  "description": "NDI's Multi-Channel Front Office Assistant plugin for Claude Code and the Claude app, installable straight from this repo.",
+  "plugins": [
+    {
+      "name": "fo-01-front-office",
+      "source": "./plugins/fo-01-front-office",
+      "displayName": "FO-01 — Multi-Channel Front Office Assistant",
+      "description": "Handle inbound customer requests on Slack and Google Chat from a single agent: answer FAQs from an approved knowledge base, qualify enquiries, escalate complaints and anything contractual to the right human team with full context, and log every interaction to a shared record. It refuses to improvise an answer the knowledge base does not carry.",
+      "author": {
+        "name": "New Digital Intelligence"
+      },
+      "category": "productivity",
+      "keywords": [
+        "front-office",
+        "multi-channel-front-office-assistant",
+        "customer-service",
+        "intake",
+        "triage",
+        "escalation",
+        "faq",
+        "lead-qualification",
+        "slack",
+        "google-chat",
+        "google-sheets",
+        "ndi",
+        "fo-01"
+      ]
+    }
+  ]
+}

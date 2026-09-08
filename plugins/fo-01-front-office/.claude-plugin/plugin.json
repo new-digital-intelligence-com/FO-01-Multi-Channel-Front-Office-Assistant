@@ -1,0 +1,24 @@
+{
+  "name": "fo-01-front-office",
+  "displayName": "FO-01 — Multi-Channel Front Office Assistant",
+  "description": "NDI's FO-01 AI Employee. Handles inbound customer requests on Slack and Google Chat from a single agent: answers FAQs from an approved knowledge base and refuses to improvise what it does not carry, qualifies enquiries, escalates complaints, refunds and anything contractual to the right human team with the full handover context, and logs every interaction to a shared record. Reading is free; anything visible to a customer is confirmed first.",
+  "author": {
+    "name": "New Digital Intelligence"
+  },
+  "repository": "https://github.com/new-digital-intelligence-com/FO-01-Multi-Channel-Front-Office-Assistant",
+  "license": "UNLICENSED",
+  "keywords": [
+    "front-office",
+    "customer-service",
+    "intake",
+    "triage",
+    "escalation",
+    "faq",
+    "lead-qualification",
+    "slack",
+    "google-chat",
+    "google-sheets",
+    "ndi",
+    "fo-01"
+  ]
+}

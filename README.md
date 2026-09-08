@@ -12,10 +12,10 @@ driven from the Claude UI. No web UI of its own.
 | MCP server (the Claude connector) | `app/api/mcp/route.ts` |
 | Health / readiness probe | `app/api/health/route.ts` |
 | **Tool registry — the single source of truth** | `lib/core/tools.ts` |
-| **Behaviour contract — brand voice, escalation rules** | `lib/core/contract.md` |
+| **Behaviour contract — brand voice, escalation rules** | `lib/core/rules.md` |
 | FAQ knowledge base + escalation triggers | `lib/core/kb.ts` |
 | Store: Google Sheet, in-memory fallback | `lib/db/store.ts` |
-| Claude plugin + skills | `plugin/` |
+| Claude plugin + skill | `plugins/fo-01-front-office/` |
 
 ## Who the app acts as
 
@@ -54,8 +54,8 @@ the web app. Run it after editing the console.
 when channels are added. A capability cannot exist on one surface and be missing from the
 other.
 
-`lib/core/contract.md` is the one behaviour contract. `npm run sync:contract` copies it into
-the plugin so the skill ships a byte-identical version; `npm run sync:contract -- --check`
+`lib/core/rules.md` is the one behaviour contract. `npm run sync:rules` copies it into
+the plugin so the skill ships a byte-identical version; `npm run sync:rules -- --check`
 fails if they drift. The `get_operating_contract` tool always returns the live copy, which
 wins over any bundled one.
 
