@@ -66,6 +66,21 @@ export function googleError(err: unknown, what: string): Error {
   // A disabled API and a missing scope both surface as 403. They need opposite fixes, so
   // check the more specific one first — telling someone to re-consent when the API is off
   // sends them round a loop that cannot succeed.
+  // "Chat app not found" is NOT a disabled API — the API is on, but the Chat app itself has
+  // never been filled in on the Chat API's Configuration tab. Enabling the API and
+  // configuring the app are two separate steps and the generic advice sends people to the
+  // page that already looks correct.
+  if (/Chat app not found/i.test(msg)) {
+    const project = process.env.GOOGLE_CLOUD_PROJECT || "<your-project>";
+    return new Error(
+      `${what} failed: the Google Chat app is not configured. Enabling the Chat API is not ` +
+        `enough — open the Chat API's Configuration tab and fill in the app name, avatar and ` +
+        `description, then save: ` +
+        `https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat?project=${project} ` +
+        `Reading messages works without this; posting does not.`,
+    );
+  }
+
   if (/has not been used in project|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(msg)) {
     const api = msg.match(/([a-z]+\.googleapis\.com)/i)?.[1] ?? "the API";
     return new Error(
