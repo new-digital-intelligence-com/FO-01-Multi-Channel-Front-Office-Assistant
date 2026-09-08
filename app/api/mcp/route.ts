@@ -22,11 +22,26 @@ const handler = createMcpHandler((server) => {
   for (const tool of TOOLS) {
     server.registerTool(
       tool.name,
-      { title: tool.title, description: tool.description, inputSchema: tool.schema },
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.schema,
+        // Only declare an output schema when the tool actually returns data. MCP rejects
+        // structuredContent from a tool that never declared one.
+        ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
+      },
       async (input: unknown) => {
         try {
-          const text = await tool.run(input);
-          return { content: [{ type: "text" as const, text }] };
+          const answer = await tool.run(input);
+          // A plain string is prose for the model. An object carries the same answer as
+          // data too, which is what an in-Claude app renders.
+          if (typeof answer === "string") {
+            return { content: [{ type: "text" as const, text: answer }] };
+          }
+          return {
+            content: [{ type: "text" as const, text: answer.text }],
+            structuredContent: answer.data as Record<string, unknown>,
+          };
         } catch (err) {
           // Surface the failure instead of returning a cheerful empty result —
           // the contract's honesty rules apply to tools as much as to replies.

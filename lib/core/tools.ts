@@ -24,13 +24,23 @@ import * as slack from "@/lib/channels/slack";
 const CHANNELS = ["phone", "email", "webchat", "gchat", "whatsapp", "slack", "claude"] as const;
 const TEAMS = ["Finance", "Support", "Sales", "Management"] as const;
 
+/**
+ * A tool answers with prose for the model, and optionally the same answer as data.
+ *
+ * The prose is what Claude reads; `data` is what a UI renders. Returning both from one
+ * handler is what lets an in-Claude app and a chat conversation show the same truth without
+ * a second code path — the app is not re-deriving anything, it is reading the same result.
+ */
+export type ToolAnswer = string | { text: string; data: unknown };
+
 export interface ToolDef {
   name: string;
   title: string;
   description: string;
   schema: z.ZodObject<z.ZodRawShape>;
-  /** Returns plain text. Both surfaces wrap it in their own envelope. */
-  run: (input: any) => Promise<string>;
+  /** Optional JSON Schema for `data`. MCP requires it before structuredContent is allowed. */
+  outputSchema?: z.ZodObject<z.ZodRawShape>;
+  run: (input: any) => Promise<ToolAnswer>;
 }
 
 export const CONTRACT = readFileSync(join(process.cwd(), "lib/core/contract.md"), "utf8");
@@ -57,23 +67,39 @@ export const TOOLS: ToolDef[] = [
     schema: z.object({
       question: z.string().min(1).describe("The customer's question, in their own words"),
     }),
+    outputSchema: z.object({
+      verdict: z.enum(["covered", "escalate", "not_covered"]),
+      answer: z.string().nullable(),
+      escalateTo: z.string().nullable(),
+      entryId: z.string().nullable(),
+      score: z.number(),
+    }),
     run: async ({ question }) => {
       const m = lookup(question);
       if (m.escalateTo) {
-        return [
-          `ESCALATION TRIGGER matched — this is not an FAQ.`,
-          `Do not answer it, even if it resembles a question we cover.`,
-          `Escalate to ${m.escalateTo} with escalate_case.`,
-        ].join(" ");
+        return {
+          text: [
+            `ESCALATION TRIGGER matched — this is not an FAQ.`,
+            `Do not answer it, even if it resembles a question we cover.`,
+            `Escalate to ${m.escalateTo} with escalate_case.`,
+          ].join(" "),
+          data: { verdict: "escalate", answer: null, escalateTo: m.escalateTo, entryId: null, score: 0 },
+        };
       }
       if (!m.covered) {
-        return [
-          `NOT COVERED by the knowledge base (best match "${m.entry?.id ?? "none"}", score ${m.score}).`,
-          `Do not improvise an answer.`,
-          `Escalate, or ask the customer one clarifying question.`,
-        ].join(" ");
+        return {
+          text: [
+            `NOT COVERED by the knowledge base (best match "${m.entry?.id ?? "none"}", score ${m.score}).`,
+            `Do not improvise an answer.`,
+            `Escalate, or ask the customer one clarifying question.`,
+          ].join(" "),
+          data: { verdict: "not_covered", answer: null, escalateTo: null, entryId: m.entry?.id ?? null, score: m.score },
+        };
       }
-      return `COVERED (${m.entry!.id}, score ${m.score}). Approved answer:\n\n${m.entry!.a}`;
+      return {
+        text: `COVERED (${m.entry!.id}, score ${m.score}). Approved answer:\n\n${m.entry!.a}`,
+        data: { verdict: "covered", answer: m.entry!.a, escalateTo: null, entryId: m.entry!.id, score: m.score },
+      };
     },
   },
 
@@ -168,12 +194,28 @@ export const TOOLS: ToolDef[] = [
       contact: z.string().optional().describe("Omit to see all recent traffic"),
       limit: z.number().int().min(1).max(100).default(20),
     }),
+    outputSchema: z.object({
+      store: z.string(),
+      count: z.number(),
+      interactions: z.array(z.object({
+        id: z.string(), created_at: z.string(), channel: z.string(), direction: z.string(),
+        contact: z.string(), body: z.string(), intent: z.string().nullable(), escalated: z.boolean(),
+      })),
+    }),
     run: async ({ contact, limit }) => {
       const rows = await recentInteractions(limit, contact);
-      if (rows.length === 0) return `No interactions found (store: ${backend()}). This is a first contact.`;
-      return rows
-        .map((r) => `${r.created_at} [${r.channel}/${r.direction}] ${r.contact}${r.escalated ? " (escalated)" : ""}: ${r.body}`)
-        .join("\n");
+      const data = {
+        store: backend(),
+        count: rows.length,
+        interactions: rows.map((r) => ({
+          id: r.id, created_at: r.created_at, channel: r.channel, direction: r.direction,
+          contact: r.contact, body: r.body, intent: r.intent ?? null, escalated: Boolean(r.escalated),
+        })),
+      };
+      const text = rows.length === 0
+        ? `No interactions found (store: ${backend()}). This is a first contact.`
+        : rows.map((r) => `${r.created_at} [${r.channel}/${r.direction}] ${r.contact}${r.escalated ? " (escalated)" : ""}: ${r.body}`).join("\n");
+      return { text, data };
     },
   },
 
@@ -182,12 +224,28 @@ export const TOOLS: ToolDef[] = [
     title: "List open escalations",
     description: "Show escalations still waiting on a human, newest first, with the team they were routed to.",
     schema: z.object({ limit: z.number().int().min(1).max(100).default(20) }),
+    outputSchema: z.object({
+      store: z.string(),
+      count: z.number(),
+      cases: z.array(z.object({
+        id: z.string(), created_at: z.string(), contact: z.string(), channel: z.string(),
+        team: z.string(), reason: z.string(), context: z.string(), status: z.string(),
+      })),
+    }),
     run: async ({ limit }) => {
       const rows = await openCases(limit);
-      if (rows.length === 0) return `No open cases (store: ${backend()}).`;
-      return rows
-        .map((c) => `${c.created_at} [${c.team}] ${c.contact} via ${c.channel} — ${c.reason}\n    context: ${c.context}`)
-        .join("\n");
+      const data = {
+        store: backend(),
+        count: rows.length,
+        cases: rows.map((c) => ({
+          id: c.id, created_at: c.created_at, contact: c.contact, channel: c.channel,
+          team: c.team, reason: c.reason, context: c.context, status: c.status,
+        })),
+      };
+      const text = rows.length === 0
+        ? `No open cases (store: ${backend()}).`
+        : rows.map((c) => `${c.created_at} [${c.team}] ${c.contact} via ${c.channel} — ${c.reason}\n    context: ${c.context}`).join("\n");
+      return { text, data };
     },
   },
 ];
@@ -211,31 +269,67 @@ TOOLS.push(
       space: z.string().optional().describe("gchat only: the space id or name. Omit to list spaces."),
       query: z.string().optional().describe("gmail only: a Gmail search query. Defaults to in:inbox."),
     }),
+    outputSchema: z.object({
+      channel: z.string(),
+      kind: z.enum(["messages", "spaces"]),
+      count: z.number(),
+      messages: z.array(z.object({
+        ref: z.string(), at: z.string(), from: z.string(),
+        subject: z.string().nullable(), text: z.string(), threadRef: z.string().nullable(),
+      })),
+      spaces: z.array(z.object({ id: z.string(), name: z.string() })),
+    }),
     run: async ({ channel, limit, space, query }) => {
       if (channel === "gmail") {
         const mails = await gmail.readInbox(limit, query ?? "in:inbox");
-        if (!mails.length) return "Inbox is empty for that query.";
-        return mails
-          .map((m) => `[${m.date}] from ${m.from}\n  subject: ${m.subject}\n  ${m.snippet}\n  threadId=${m.threadId} messageId=${m.messageId ?? "-"}`)
-          .join("\n\n");
+        const data = {
+          channel, kind: "messages" as const, count: mails.length, spaces: [],
+          messages: mails.map((m) => ({
+            ref: m.messageId ?? m.id, at: m.date, from: m.from,
+            subject: m.subject, text: m.snippet, threadRef: m.threadId || null,
+          })),
+        };
+        const text = mails.length === 0 ? "Inbox is empty for that query."
+          : mails.map((m) => `[${m.date}] from ${m.from}\n  subject: ${m.subject}\n  ${m.snippet}\n  threadId=${m.threadId} messageId=${m.messageId ?? "-"}`).join("\n\n");
+        return { text, data };
       }
 
       if (channel === "gchat") {
         if (!space) {
           const spaces = await gchat.listSpaces();
-          if (!spaces.length) return "No Google Chat spaces visible to this account.";
-          return "Pass one of these as `space`:\n" + spaces.map((s) => `  ${s.name} — ${s.displayName}`).join("\n");
+          const data = {
+            channel, kind: "spaces" as const, count: spaces.length, messages: [],
+            spaces: spaces.map((sp) => ({ id: sp.name, name: sp.displayName })),
+          };
+          const text = spaces.length === 0 ? "No Google Chat spaces visible to this account."
+            : "Pass one of these as `space`:\n" + spaces.map((sp) => `  ${sp.name} — ${sp.displayName}`).join("\n");
+          return { text, data };
         }
         const msgs = await gchat.readSpace(space, limit);
-        if (!msgs.length) return `No messages in ${space}.`;
-        return msgs.map((m) => `[${m.createTime}] ${m.sender}: ${m.text}`).join("\n");
+        const data = {
+          channel, kind: "messages" as const, count: msgs.length, spaces: [],
+          messages: msgs.map((m) => ({
+            ref: m.name, at: m.createTime, from: m.sender,
+            subject: null, text: m.text, threadRef: m.thread ?? null,
+          })),
+        };
+        const text = msgs.length === 0 ? `No messages in ${space}.`
+          : msgs.map((m) => `[${m.createTime}] ${m.sender}: ${m.text}`).join("\n");
+        return { text, data };
       }
 
       const msgs = await slack.readMessages(limit);
-      if (!msgs.length) return `No messages in #${slack.ALLOWED_CHANNEL}.`;
-      return msgs
-        .map((m) => `[${new Date(Number(m.ts) * 1000).toISOString()}] ${m.userName}${m.isBot ? " (app)" : ""}: ${m.text}  ts=${m.ts}`)
-        .join("\n");
+      const data = {
+        channel, kind: "messages" as const, count: msgs.length, spaces: [],
+        messages: msgs.map((m) => ({
+          ref: m.ts, at: new Date(Number(m.ts) * 1000).toISOString(),
+          from: m.userName + (m.isBot ? " (app)" : ""),
+          subject: null, text: m.text, threadRef: m.threadTs ?? null,
+        })),
+      };
+      const text = msgs.length === 0 ? `No messages in #${slack.ALLOWED_CHANNEL}.`
+        : msgs.map((m) => `[${new Date(Number(m.ts) * 1000).toISOString()}] ${m.userName}${m.isBot ? " (app)" : ""}: ${m.text}  ts=${m.ts}`).join("\n");
+      return { text, data };
     },
   },
 
