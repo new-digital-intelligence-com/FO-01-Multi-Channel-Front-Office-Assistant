@@ -186,6 +186,31 @@
 
   .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 6px; }
 
+  .who { display: flex; flex-direction: column; gap: 1px; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); margin-bottom: 2px; }
+  .who-name { font-size: 12.5px; font-weight: 600; }
+  .who-mail { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); overflow-wrap: anywhere; }
+  .linkbtn {
+    align-self: flex-start;
+    border: 0; background: none; padding: 2px 0;
+    font: inherit; font-size: 11px;
+    color: var(--ink-3); text-decoration: underline; cursor: pointer;
+  }
+  .linkbtn:hover { color: var(--ink); }
+
+  .signin {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .signin:hover { filter: brightness(1.08); }
+
   .statline {
     display: flex;
     align-items: center;
@@ -493,6 +518,12 @@
     </nav>
 
     <div class="rail-foot">
+      <div class="who" id="who" hidden>
+        <div class="who-name" id="who-name"></div>
+        <div class="who-mail" id="who-mail"></div>
+        <button class="linkbtn" id="btn-signout">Sign out</button>
+      </div>
+      <a class="signin" id="btn-signin" href="/api/auth/google" hidden>Sign in with Google</a>
       <div class="statline"><span class="dot wait" id="dot-conn"></span><span id="txt-conn">connecting</span></div>
       <div class="statline"><span class="dot" id="dot-store"></span><span id="txt-store">store unknown</span></div>
       <div class="statline" id="line-fresh" hidden><span class="dot"></span><span id="txt-fresh"></span></div>
@@ -1065,6 +1096,64 @@
     });
   }
 
+  /* ---------------- who is acting ---------------- */
+
+  var identity = { signedIn: false };
+
+  function renderIdentity(me) {
+    identity = me || { signedIn: false };
+    var who = $("who"), signin = $("btn-signin");
+
+    if (identity.signedIn) {
+      who.hidden = false;
+      signin.hidden = true;
+      $("who-name").textContent = identity.name || identity.email;
+      $("who-mail").textContent = identity.email;
+      var missing = [];
+      if (!identity.gmail) missing.push("Gmail");
+      if (!identity.chat) missing.push("Chat");
+      if (missing.length) {
+        pageBanner("warn", "Signed in without " + missing.join(" and ") + " access",
+          "Sign out and back in, and allow every permission — the channels you did not grant will fail.");
+      }
+    } else {
+      who.hidden = true;
+      signin.hidden = false;
+      if (!identity.fallback) {
+        pageBanner("warn", "Nobody is signed in",
+          "Gmail and Google Chat read the mailbox of whoever is signed in. Sign in with Google " +
+          "to use them. The escalation queue and the log work either way.");
+      }
+    }
+  }
+
+  function loadIdentity() {
+    // Only meaningful when served by the app; inside Claude there is no cookie to read.
+    if (!sameOrigin) return Promise.resolve();
+    return fetch("/api/auth/me", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(renderIdentity)
+      .catch(function () { /* leave the rail as it is */ });
+  }
+
+  $("btn-signout").addEventListener("click", function () {
+    fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
+      .then(function () { location.href = "/"; });
+  });
+
+  // Report the outcome of a sign-in round trip rather than dropping the viewer back silently.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var r = q.get("signin");
+    if (!r) return;
+    if (r === "denied") pageBanner("warn", "Sign-in cancelled", "Nothing changed. Gmail and Chat stay unavailable until you sign in.");
+    else if (r === "norefresh") pageBanner("crit", "Google did not return a refresh token", "Remove this app at myaccount.google.com/permissions, then sign in again.");
+    else if (r === "badstate") pageBanner("crit", "Sign-in could not be verified", "The request did not match the one this browser started. Try signing in again.");
+    else if (r === "error") pageBanner("crit", "Sign-in failed", q.get("detail") || "Google rejected the exchange.");
+    else if (r === "nocode") pageBanner("crit", "Sign-in returned no authorization code", "Try again from the sign-in button.");
+    history.replaceState({}, "", location.pathname);
+  })();
+
   /* ---------------- boot ---------------- */
 
   renderCases(SAMPLE_CASES, true);
@@ -1181,7 +1270,7 @@
   }
 
   if (sameOrigin) {
-    boot(httpTransport());
+    loadIdentity().then(function () { boot(httpTransport()); });
   } else if (use) {
     use("mcp").then(function (ns) {
       if (!ns) {

@@ -7,8 +7,8 @@
 import { google } from "googleapis";
 import { googleAuth, googleError } from "./google";
 
-function chat() {
-  return google.chat({ version: "v1", auth: googleAuth() });
+async function chat() {
+  return google.chat({ version: "v1", auth: await googleAuth() });
 }
 
 export interface Space {
@@ -26,7 +26,7 @@ export interface ChatMessage {
 
 export async function listSpaces(): Promise<Space[]> {
   try {
-    const res = await chat().spaces.list({ pageSize: 50 });
+    const res = await (await chat()).spaces.list({ pageSize: 50 });
     return (res.data.spaces ?? []).map((s) => ({
       name: s.name ?? "",
       displayName: s.displayName ?? s.name ?? "(direct message)",
@@ -39,7 +39,7 @@ export async function listSpaces(): Promise<Space[]> {
 export async function readSpace(space: string, limit = 20): Promise<ChatMessage[]> {
   try {
     const parent = space.startsWith("spaces/") ? space : `spaces/${space}`;
-    const res = await chat().spaces.messages.list({ parent, pageSize: limit });
+    const res = await (await chat()).spaces.messages.list({ parent, pageSize: limit });
     return (res.data.messages ?? []).map((m) => ({
       name: m.name ?? "",
       sender: m.sender?.displayName ?? m.sender?.name ?? "unknown",
@@ -55,7 +55,7 @@ export async function readSpace(space: string, limit = 20): Promise<ChatMessage[
 export async function postToSpace(space: string, text: string, thread?: string): Promise<string> {
   try {
     const parent = space.startsWith("spaces/") ? space : `spaces/${space}`;
-    const res = await chat().spaces.messages.create({
+    const res = await (await chat()).spaces.messages.create({
       parent,
       requestBody: { text, ...(thread ? { thread: { name: thread } } : {}) },
     });

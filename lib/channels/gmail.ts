@@ -7,8 +7,8 @@
 import { google } from "googleapis";
 import { googleAuth, googleError } from "./google";
 
-function gmail() {
-  return google.gmail({ version: "v1", auth: googleAuth() });
+async function gmail() {
+  return google.gmail({ version: "v1", auth: await googleAuth() });
 }
 
 export interface Mail {
@@ -27,7 +27,7 @@ function header(headers: { name?: string | null; value?: string | null }[] | und
 
 export async function readInbox(limit = 10, query = "in:inbox"): Promise<Mail[]> {
   try {
-    const api = gmail();
+    const api = await gmail();
     const list = await api.users.messages.list({ userId: "me", q: query, maxResults: limit });
     const ids = list.data.messages ?? [];
 
@@ -91,7 +91,8 @@ export async function sendReply(opts: {
       .replace(/\//g, "_")
       .replace(/=+$/, "");
 
-    const res = await gmail().users.messages.send({
+    const api = await gmail();
+    const res = await api.users.messages.send({
       userId: "me",
       requestBody: { raw, ...(opts.threadId ? { threadId: opts.threadId } : {}) },
     });

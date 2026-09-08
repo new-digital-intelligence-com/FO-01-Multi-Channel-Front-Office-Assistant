@@ -7,6 +7,7 @@
  */
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
+import { currentSession } from "@/lib/auth/session";
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -14,20 +15,47 @@ const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 
 export const googleConfigured = Boolean(CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN);
 
-let cached: OAuth2Client | null = null;
+let appCached: OAuth2Client | null = null;
 
-export function googleAuth(): OAuth2Client {
+/**
+ * The app's own credential. Used for the shared interaction log, which belongs to the
+ * organisation rather than to whoever happens to be looking at the console.
+ */
+export function appAuth(): OAuth2Client {
   if (!googleConfigured) {
     throw new Error(
       "Google is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and " +
         "GOOGLE_REFRESH_TOKEN, then run `npm run google:auth`.",
     );
   }
-  if (!cached) {
-    cached = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
-    cached.setCredentials({ refresh_token: REFRESH_TOKEN });
+  if (!appCached) {
+    appCached = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+    appCached.setCredentials({ refresh_token: REFRESH_TOKEN });
   }
-  return cached;
+  return appCached;
+}
+
+/**
+ * Whoever is using the console right now — their mailbox, their Chat spaces.
+ *
+ * Falls back to the app's credential when nobody is signed in, which is what the MCP
+ * connector always gets: it carries no cookies, so a Claude-side call acts as the app.
+ * Never cached, because it differs per request.
+ */
+export async function googleAuth(): Promise<OAuth2Client> {
+  const session = await currentSession();
+  if (session?.refreshToken) {
+    const client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+    client.setCredentials({ refresh_token: session.refreshToken });
+    return client;
+  }
+  if (!googleConfigured) {
+    throw new Error(
+      "Nobody is signed in and the app has no Google credential of its own. " +
+        "Sign in with Google to read your mail and Chat spaces.",
+    );
+  }
+  return appAuth();
 }
 
 /** Turns Google's noisy errors into something a model can act on. */

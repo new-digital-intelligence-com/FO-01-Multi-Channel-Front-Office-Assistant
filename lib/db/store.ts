@@ -83,6 +83,10 @@ function sheets(): sheets_v4.Sheets {
 
 const mem = { interactions: [] as Interaction[], cases: [] as Case[] };
 
+/**
+ * The log always uses the app's own credential, never the signed-in viewer's — an
+ * organisational record should not change shape depending on who is looking at it.
+ */
 export function backend(): "google-sheet" | "memory" {
   return configured ? "google-sheet" : "memory";
 }

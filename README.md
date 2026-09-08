@@ -17,6 +17,26 @@ driven from the Claude UI. No web UI of its own.
 | Store: Google Sheet, in-memory fallback | `lib/db/store.ts` |
 | Claude plugin + skills | `plugin/` |
 
+## Who the app acts as
+
+Two credentials, on purpose:
+
+| What | Acts as | Why |
+|---|---|---|
+| Interaction log, cases | the app's own Google token | an organisational record should not change with who is looking |
+| Gmail, Google Chat | the signed-in viewer | it is their mailbox and their spaces |
+
+Anyone in the Workspace signs in at `/api/auth/google`; the refresh token rides in an
+encrypted (not merely signed) cookie, because a readable one would grant mailbox access to
+anyone holding the browser. Signed out, channel reads fall back to the app's own token.
+
+The MCP connector carries no cookies, so a Claude-side call always acts as the app. That is
+deliberate, not a gap.
+
+**Gmail scopes are restricted by Google.** An Internal consent screen lets your whole
+Workspace sign in immediately. Opening it to any Google account needs Google verification
+and a security assessment first.
+
 ## Two front doors, one page
 
 The console is the same file either way. Served by this app it calls `/api/tools/<name>`
