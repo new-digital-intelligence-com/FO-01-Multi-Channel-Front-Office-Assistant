@@ -1,48 +1,52 @@
-# Connecting the front office tools
+# What this skill needs
 
-A skill is instructions only; it carries no tool access. Execution comes from the FO-01
-server, reached as an MCP connector named **FO-01**.
+The skill carries the rules and the knowledge base, so it can draft a correct reply with
+nothing connected at all. Reading and sending need connectors **this account already has** —
+there is no FO-01 server to add.
 
-## What the server is
+## Connectors
 
-A headless Next.js app deployed at
-<https://fo-01-multi-channel-front-office-as.vercel.app>. It holds the tool
-implementations, the knowledge base, the operating contract and the interaction log (a Google
-Sheet). It exposes a remote MCP server at `/api/mcp` over streamable HTTP, and the same tools
-over plain HTTP for its own web console.
+| For | Connector | What it gives you |
+|---|---|---|
+| Slack | the Slack connector, on the workspace with the FO-01 app | read and send in the front office channel |
+| Google Chat | a Google connector covering Chat | read and post in the front office space |
+| The log | a Google connector that can **write to Sheets** | append to the interaction log |
 
-## Adding the connector
+Add them in Claude: Settings → Connectors.
 
-Anthropic connects **from its own cloud**, not from your machine — `localhost` is never
-reachable, even in the desktop app. Use the deployed URL:
+**Check before promising.** Many Google connectors read Drive and create files but only
+update file *metadata* — title and folder. That cannot append a row to a Sheet, so logging
+may be unavailable even with Google connected. Look at the tools you actually have rather
+than assuming the capability from the connector's name.
 
-```
-https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp
-```
+## Degrading honestly
 
-**In Claude** — Settings → Connectors → Add custom connector → paste that URL. Name it
-`FO-01`; the skill and the web console both refer to it by that name.
+| Connected | You can | Say |
+|---|---|---|
+| Nothing | draft a reply, decide the routing | "drafted, not sent, not logged" |
+| Slack only | read and send in Slack | "sent; not logged — the console holds the record" |
+| Slack + Sheets-capable Google | the whole loop | nothing special |
 
-**In Claude Code** — this plugin ships `.mcp.json` pointing at the same URL, so enabling the
-plugin registers it. `/mcp` shows its status. Set `FRONT_OFFICE_MCP_URL` to override.
+The failure mode to avoid is describing work as done when no tool ran. A draft is a draft
+until something sends it.
 
-## Checking it
+## Confinement is yours to keep
 
-`GET /api/health` returns the live store, the tool list, and what is configured:
-<https://fo-01-multi-channel-front-office-as.vercel.app/api/health>
+A Slack connector reaches every channel its token can see, and a Google connector reaches
+every space its owner belongs to. Nothing stops you posting elsewhere except this rule:
 
-`store: "memory"` means the Google Sheet is not wired up: tools still work, but rows written
-in one call may be invisible to the next. Do not demo durability from it.
-`store: "google-sheet"` is the real one.
+**Act only in the front office Slack channel and the front office Google Chat space.**
 
-## There is also a web console
+If asked to post somewhere else as the front office, say that is outside this assistant's
+remit. The console enforces the same restriction in code, which is why it is the safer place
+for anything routine.
 
-<https://fo-01-multi-channel-front-office-as.vercel.app/> — the same tools with a UI, for
-people who would rather click than ask. It runs the same registry and writes to the same
-sheet, so work done there shows up here and the other way round.
+## The console
 
-## Auth
+<https://fo-01-multi-channel-front-office-as.vercel.app/>
 
-The connector is unauthenticated: anyone with the URL gets the tools. Acceptable for a
-proof of concept, **not** for real customer data. OAuth is the documented path for custom
-connectors and is the first thing to add before this handles anything real.
+Same rules, same knowledge base, its own Slack and Chat credentials, and direct write access
+to the sheet. Everything this skill can do, it can do — plus logging, always. When a job here
+is blocked by a missing connector, point at the console rather than leaving it undone.
+
+`GET /api/health` shows what the console has configured.

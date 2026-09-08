@@ -1,0 +1,52 @@
+{
+  "entries": [
+    {
+      "id": "hours",
+      "q": ["opening hours", "when are you open", "what time do you close", "horaires"],
+      "a": "We're open Monday to Friday, 09:00–18:00, and Saturday 10:00–14:00. Closed Sundays and public holidays."
+    },
+    {
+      "id": "location",
+      "q": ["where are you", "address", "location", "how do i find you"],
+      "a": "We're at 12 Rue de la Paix, and there's parking behind the building. The entrance is on the courtyard side."
+    },
+    {
+      "id": "pricing",
+      "q": ["how much", "price", "pricing", "cost", "rates", "combien"],
+      "a": "Standard engagements start at €2,500. The final figure depends on scope, so we quote after a short call rather than guessing up front."
+    },
+    {
+      "id": "lead-time",
+      "q": ["how long", "lead time", "when can you start", "turnaround", "delivery time"],
+      "a": "Typical lead time is two to three weeks from signed scope. Urgent work can sometimes be slotted sooner — worth asking."
+    },
+    {
+      "id": "booking",
+      "q": ["book", "appointment", "schedule a call", "meeting", "rendez-vous"],
+      "a": "Send three times that suit you and we'll confirm one. Calls are 30 minutes and there's no charge for the first one."
+    },
+    {
+      "id": "services",
+      "q": ["what do you do", "services", "what do you offer", "scope"],
+      "a": "We handle front-office automation: intake across phone, email, chat and messaging, routed into whatever system you already run."
+    }
+  ],
+  "triggers": [
+    {
+      "team": "Finance",
+      "terms": ["refund", "rembours", "chargeback", "double charge", "duplicate charge", "overcharge", "invoice dispute", "billing error"]
+    },
+    {
+      "team": "Management",
+      "terms": ["complain", "complaint", "unacceptable", "lawyer", "legal action", "sue you", "court", "press", "journalist", "injur", "unsafe", "emergency", "speak to a human", "real person", "talk to someone", "manager", "supervisor", "reclamation"]
+    },
+    {
+      "team": "Support",
+      "terms": ["not working", "doesn't work", "broken", "outage", "is down", "bug", "error message", "crash"]
+    },
+    {
+      "team": "Sales",
+      "terms": ["cancel my", "cancellation", "terminate my contract", "end my contract", "discount", "renegotiate"]
+    }
+  ]
+}

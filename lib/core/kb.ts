@@ -5,51 +5,27 @@
  * Rule that matters: if nothing matches, the caller must escalate rather than improvise.
  * See lib/core/rules.md, "What we answer directly".
  */
+import data from "./knowledge-base.json";
+
 export interface Entry {
   id: string;
   q: string[];
   a: string;
-  tags: string[];
 }
 
-export const KB: Entry[] = [
-  {
-    id: "hours",
-    q: ["opening hours", "when are you open", "what time do you close", "horaires"],
-    a: "We're open Monday to Friday, 09:00–18:00, and Saturday 10:00–14:00. Closed Sundays and public holidays.",
-    tags: ["general"],
-  },
-  {
-    id: "location",
-    q: ["where are you", "address", "location", "how do i find you"],
-    a: "We're at 12 Rue de la Paix, and there's parking behind the building. The entrance is on the courtyard side.",
-    tags: ["general"],
-  },
-  {
-    id: "pricing",
-    q: ["how much", "price", "pricing", "cost", "rates", "combien"],
-    a: "Standard engagements start at €2,500. The final figure depends on scope, so we quote after a short call rather than guessing up front.",
-    tags: ["sales"],
-  },
-  {
-    id: "lead-time",
-    q: ["how long", "lead time", "when can you start", "turnaround", "delivery time"],
-    a: "Typical lead time is two to three weeks from signed scope. Urgent work can sometimes be slotted sooner — worth asking.",
-    tags: ["sales", "delivery"],
-  },
-  {
-    id: "booking",
-    q: ["book", "appointment", "schedule a call", "meeting", "rendez-vous"],
-    a: "Send three times that suit you and we'll confirm one. Calls are 30 minutes and there's no charge for the first one.",
-    tags: ["sales"],
-  },
-  {
-    id: "services",
-    q: ["what do you do", "services", "what do you offer", "scope"],
-    a: "We handle front-office automation: intake across phone, email, chat and messaging, routed into whatever system you already run.",
-    tags: ["general"],
-  },
-];
+/**
+ * The knowledge base lives in knowledge-base.json so one file feeds both surfaces: this
+ * matcher, and the copy synced into the skill, which answers from it with no server involved.
+ */
+export const KB: Entry[] = data.entries;
+
+/**
+ * Escalation triggers, from rules.md. These OVERRIDE the FAQ lookup: a refund question that
+ * happens to share words with an FAQ entry must still escalate, never be answered.
+ * Matched as substrings so inflections ("refunded", "cancelling") are caught.
+ */
+const TRIGGERS: { team: string; terms: string[] }[] = data.triggers;
+
 
 export interface Match {
   entry: Entry | null;
@@ -64,12 +40,6 @@ export interface Match {
  * that happens to share words with an FAQ entry must still escalate, never be answered.
  * Matched as substrings so inflections ("refunded", "cancelling") are caught.
  */
-const TRIGGERS: { team: string; terms: string[] }[] = [
-  { team: "Finance", terms: ["refund", "rembours", "chargeback", "double charge", "duplicate charge", "overcharge", "invoice dispute", "billing error"] },
-  { team: "Management", terms: ["complain", "complaint", "unacceptable", "lawyer", "legal action", "sue you", "court", "press", "journalist", "injur", "unsafe", "emergency", "speak to a human", "real person", "talk to someone", "manager", "supervisor", "reclamation"] },
-  { team: "Support", terms: ["not working", "doesn't work", "broken", "outage", "is down", "bug", "error message", "crash"] },
-  { team: "Sales", terms: ["cancel my", "cancellation", "terminate my contract", "end my contract", "discount", "renegotiate"] },
-];
 
 /** Words that carry no topic signal — they let unrelated questions score high. */
 const STOP = new Set([

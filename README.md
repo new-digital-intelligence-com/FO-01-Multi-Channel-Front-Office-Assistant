@@ -1,7 +1,8 @@
 # FO-01 — Multi-Channel Front Office Assistant
 
-A headless Next.js app that exposes the front office as **MCP tools**, so the assistant can be
-driven from the Claude UI. No web UI of its own.
+A front office assistant with two independent surfaces: a **web console** backed by a Next.js
+app, and a **Claude skill** that works off whatever connectors an account already has. Neither
+depends on the other, and both answer from the same rules and the same knowledge base.
 
 ## What exists
 
@@ -9,10 +10,10 @@ driven from the Claude UI. No web UI of its own.
 |---|---|
 | The console UI | `console/front-office-console.html` -> `public/console.html` |
 | HTTP tool dispatcher (the web UI's back end) | `app/api/tools/[tool]/route.ts` |
-| MCP server (the Claude connector) | `app/api/mcp/route.ts` |
 | Health / readiness probe | `app/api/health/route.ts` |
 | **Tool registry — the single source of truth** | `lib/core/tools.ts` |
 | **Behaviour contract — brand voice, escalation rules** | `lib/core/rules.md` |
+| **Knowledge base — the approved answers** | `lib/core/knowledge-base.json` |
 | FAQ knowledge base + escalation triggers | `lib/core/kb.ts` |
 | Store: Google Sheet, in-memory fallback | `lib/db/store.ts` |
 | Claude plugin + skill | `plugins/fo-01-front-office/` |
