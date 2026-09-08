@@ -647,6 +647,22 @@
       contact: "example@customer.test", body: "What time do you close on Saturday?", intent: "hours", escalated: false }
   ];
 
+  // A thrown error used to leave a section on "Reading…" forever with nothing in the UI to
+  // say why. Surface it instead — a stuck spinner is indistinguishable from a slow network.
+  window.addEventListener("error", function (ev) {
+    try {
+      pageBanner("crit", "The console hit an error",
+        (ev.message || "Unknown error") + (ev.lineno ? " (line " + ev.lineno + ")" : ""));
+    } catch (e) { /* the banner host may not exist yet */ }
+  });
+  window.addEventListener("unhandledrejection", function (ev) {
+    try {
+      var r = ev.reason || {};
+      pageBanner("crit", "A request failed and was not handled",
+        r.message || String(r));
+    } catch (e) {}
+  });
+
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -925,7 +941,7 @@
     clear(host);
     host.appendChild(el("div", "loading", "Reading " + chan + "…"));
 
-    mcp.callTool(SERVER, "read_channel", input).then(function (res) {
+    mcp.callTool(SERVER, "read_channel", { channel: chan, limit: 20 }).then(function (res) {
       setFresh(res);
       var p = res.payload;
       if (!p || typeof p !== "object") {
