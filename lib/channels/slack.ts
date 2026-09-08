@@ -140,15 +140,47 @@ async function userName(id: string): Promise<string> {
   }
 }
 
+interface RawSlackMessage {
+  ts: string;
+  user?: string;
+  text?: string;
+  thread_ts?: string;
+  bot_id?: string;
+  subtype?: string;
+  reply_count?: number;
+}
+
+/**
+ * Recent messages, **including replies inside threads**.
+ *
+ * `conversations.history` returns only top-level messages — a thread reply never appears in
+ * it, however recent. Reading history alone means a question asked in a thread is invisible,
+ * which is exactly where a follow-up question lands. So every thread in the window is
+ * expanded with `conversations.replies`.
+ */
 export async function readMessages(limit = 20): Promise<SlackMessage[]> {
   const channel = await resolveChannel();
   const res = await api("conversations.history", { channel, limit });
-  const raw = res.messages as {
-    ts: string; user?: string; text?: string; thread_ts?: string; bot_id?: string; subtype?: string;
-  }[];
+  const raw = (res.messages as RawSlackMessage[]) ?? [];
+
+  const byTs = new Map<string, RawSlackMessage>();
+  for (const m of raw) byTs.set(m.ts, m);
+
+  // Expand every thread. The parent comes back again in the replies list; the map dedupes it.
+  for (const m of raw) {
+    const hasThread = (m.reply_count ?? 0) > 0 || (m.thread_ts && m.thread_ts === m.ts);
+    if (!hasThread) continue;
+    try {
+      const r = await api("conversations.replies", { channel, ts: m.ts, limit: 50 });
+      for (const reply of (r.messages as RawSlackMessage[]) ?? []) byTs.set(reply.ts, reply);
+    } catch (err) {
+      // One unreadable thread should not hide the rest of the channel.
+      console.warn(`slack conversations.replies failed for ${m.ts}:`, (err as Error).message);
+    }
+  }
 
   const msgs: SlackMessage[] = [];
-  for (const m of raw) {
+  for (const m of [...byTs.values()].sort((a, b) => Number(a.ts) - Number(b.ts))) {
     if (m.subtype === "channel_join" || m.subtype === "channel_leave") continue;
     msgs.push({
       ts: m.ts,
@@ -159,7 +191,7 @@ export async function readMessages(limit = 20): Promise<SlackMessage[]> {
       isBot: Boolean(m.bot_id),
     });
   }
-  return msgs.reverse(); // oldest first reads like a conversation
+  return msgs; // oldest first reads like a conversation
 }
 
 export async function sendMessage(text: string, threadTs?: string): Promise<string> {

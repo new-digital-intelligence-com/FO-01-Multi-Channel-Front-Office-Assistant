@@ -7,7 +7,7 @@
  * There is no space parameter on the tool surface, and the guard below refuses any other
  * name even if one is passed internally.
  */
-import { google } from "googleapis";
+import { google, type chat_v1 } from "googleapis";
 import { googleAuth, googleError } from "./google";
 
 /** The only space this app may ever touch. Stored in `spaces/<id>` form. */

@@ -23,8 +23,12 @@ export const maxDuration = 60;
 
 /** At most this many messages per tick, so a busy channel cannot run up a bill unattended. */
 const MAX_PER_TICK = 5;
-/** Ignore anything older than this on the first run, so a backlog is not answered at once. */
-const MAX_AGE_MS = 60 * 60 * 1000;
+/**
+ * Ignore anything older than this, so a first run does not answer a long backlog. The
+ * per-tick cap already bounds the spend, so this can be generous — an hour was tight enough
+ * to silently skip a question asked over lunch.
+ */
+const MAX_AGE_MS = Number(process.env.TICK_MAX_AGE_MS ?? 24 * 60 * 60 * 1000);
 
 interface Candidate {
   channel: "slack" | "gchat";
@@ -57,7 +61,9 @@ async function collect(): Promise<{ candidates: Candidate[]; errors: string[] }>
         from: m.userName,
         text: m.text,
         at: Number(m.ts) * 1000,
-        threadRef: m.threadTs,
+        // Reply where the question was asked. A thread reply carries thread_ts; a top-level
+        // message becomes its own thread parent, so answering it opens one.
+        threadRef: m.threadTs ?? m.ts,
       });
     }
   } catch (err) {
@@ -150,11 +156,24 @@ async function tick(req: Request) {
   const { candidates, errors } = await collect();
   const seen = await handledRefs();
 
-  const fresh = candidates
-    .filter((c) => !seen.has(c.ref))
-    .filter((c) => started - c.at < MAX_AGE_MS)
-    .sort((a, b) => a.at - b.at)
-    .slice(0, MAX_PER_TICK);
+  const skipped: { ref: string; why: string; text: string }[] = [];
+  const eligible = candidates.filter((c) => {
+    if (seen.has(c.ref)) {
+      skipped.push({ ref: c.ref, why: "already answered", text: c.text.slice(0, 60) });
+      return false;
+    }
+    if (started - c.at >= MAX_AGE_MS) {
+      const mins = Math.round((started - c.at) / 60000);
+      skipped.push({ ref: c.ref, why: `too old (${mins} min)`, text: c.text.slice(0, 60) });
+      return false;
+    }
+    return true;
+  });
+
+  const fresh = eligible.sort((a, b) => a.at - b.at).slice(0, MAX_PER_TICK);
+  for (const c of eligible.slice(MAX_PER_TICK)) {
+    skipped.push({ ref: c.ref, why: "over the per-tick cap", text: c.text.slice(0, 60) });
+  }
 
   const handled = [];
   for (const c of fresh) {
@@ -170,7 +189,7 @@ async function tick(req: Request) {
     store: backend(),
     open: !process.env.TICK_SECRET,
     scanned: candidates.length,
-    skipped: candidates.length - fresh.length,
+    skipped,
     handled,
     errors,
     ms: Date.now() - started,
