@@ -19,6 +19,20 @@ export const ALLOWED_SPACE = normalize(
 export const ALLOWED_SPACE_LABEL =
   process.env.GCHAT_SPACE_LABEL ?? "FO-01 Multi Channel Front Office Assistant";
 
+/**
+ * An incoming webhook posts to one space without a configured Chat app, without OAuth, and
+ * without Google's app-verification path — the Chat API's `spaces.messages.create` needs all
+ * of that, and answers "Chat app not found" until the Configuration tab is filled in.
+ *
+ * It also makes the single-space restriction structural rather than merely enforced: a
+ * webhook URL is bound to the space it was created in, so there is no other space it could
+ * reach even if the code asked.
+ *
+ * Reading still uses the signed-in viewer's credential, which needs none of this.
+ */
+const WEBHOOK_URL = process.env.GCHAT_WEBHOOK_URL;
+export const webhookConfigured = Boolean(WEBHOOK_URL);
+
 function normalize(id: string): string {
   const trimmed = id.trim();
   return trimmed.startsWith("spaces/") ? trimmed : `spaces/${trimmed}`;
@@ -83,6 +97,38 @@ export async function readSpace(limit = 20, space?: string): Promise<ChatMessage
 
 export async function postToSpace(text: string, thread?: string, space?: string): Promise<string> {
   const parent = resolveSpace(space);
+
+  if (WEBHOOK_URL) {
+    // threadKey keeps replies grouped; without it every post starts a new thread.
+    const url = new URL(WEBHOOK_URL);
+    if (thread) {
+      url.searchParams.set("threadKey", thread);
+      url.searchParams.set("messageReplyOption", "REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD");
+    }
+
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({ text }),
+    });
+
+    const raw = await res.text();
+    if (!res.ok) {
+      throw new Error(
+        `Chat post failed (${res.status}) via the space webhook: ${raw.slice(0, 300)}` +
+          (res.status === 404 || res.status === 403
+            ? " — the webhook may have been deleted, or GCHAT_WEBHOOK_URL is wrong."
+            : ""),
+      );
+    }
+
+    try {
+      return (JSON.parse(raw) as { name?: string }).name ?? "posted";
+    } catch {
+      return "posted";
+    }
+  }
+
   try {
     const res = await (await chat()).spaces.messages.create({
       parent,

@@ -12,6 +12,7 @@ export async function GET() {
       slackChannel: process.env.SLACK_CHANNEL ?? "ai-employee-fo-01-multi-channel-front-office-assistant",
       slackChannelPinned: Boolean(process.env.SLACK_CHANNEL_ID),
       gchatSpace: process.env.GCHAT_SPACE ?? "spaces/AAQABsxe7jw",
+      gchatWebhook: Boolean(process.env.GCHAT_WEBHOOK_URL),
       google: Boolean(process.env.GOOGLE_REFRESH_TOKEN),
       sheet: Boolean(
         process.env.GOOGLE_SHEET_ID &&
