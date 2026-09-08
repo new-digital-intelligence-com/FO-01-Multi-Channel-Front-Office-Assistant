@@ -24,18 +24,18 @@ Two credentials, on purpose:
 | What | Acts as | Why |
 |---|---|---|
 | Interaction log, cases | the app's own Google token | an organisational record should not change with who is looking |
-| Gmail, Google Chat | the signed-in viewer | it is their mailbox and their spaces |
+| Google Chat | the signed-in viewer | it is their space membership |
 
 Anyone in the Workspace signs in at `/api/auth/google`; the refresh token rides in an
-encrypted (not merely signed) cookie, because a readable one would grant mailbox access to
-anyone holding the browser. Signed out, channel reads fall back to the app's own token.
+encrypted (not merely signed) cookie, because a readable one would grant Chat access to
+anyone holding the browser. Signed out, Chat reads fall back to the app's own token.
 
 The MCP connector carries no cookies, so a Claude-side call always acts as the app. That is
 deliberate, not a gap.
 
-**Gmail scopes are restricted by Google.** An Internal consent screen lets your whole
-Workspace sign in immediately. Opening it to any Google account needs Google verification
-and a security assessment first.
+Scopes requested: `openid`, `userinfo.email`, `userinfo.profile`, `chat.spaces.readonly`,
+`chat.messages`. No Gmail — the mail channel was removed, which also removed Google's
+restricted-scope verification requirement.
 
 ## Two front doors, one page
 
@@ -106,8 +106,8 @@ created automatically with their header rows on first write.
 | MCP endpoint | <https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp> |
 | Health | <https://fo-01-multi-channel-front-office-as.vercel.app/api/health> |
 
-Channels wired: Gmail (read + send), Google Chat (read + post), Slack (read + post, confined
-to one channel), Google Sheet (the log).
+Channels wired: Slack and Google Chat — each confined in code to a single conversation, with
+no channel or space parameter on the tool surface. Google Sheet is the log.
 
 ## Not built yet
 

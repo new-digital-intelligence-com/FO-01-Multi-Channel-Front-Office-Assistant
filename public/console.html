@@ -576,7 +576,6 @@
 
       <div class="tabs" role="tablist" id="chan-tabs">
         <button class="tab" role="tab" data-chan="slack" aria-selected="true">Slack</button>
-        <button class="tab" role="tab" data-chan="gmail" aria-selected="false">Gmail</button>
         <button class="tab" role="tab" data-chan="gchat" aria-selected="false">Google&nbsp;Chat</button>
       </div>
 
@@ -592,7 +591,6 @@
         <div class="sec-head"><h2>Reply as the front office</h2></div>
         <textarea id="reply-text" placeholder="Write the reply. Read the contract first — answer in the first sentence, reply in the language they wrote in, and never quote a price the knowledge base does not carry."></textarea>
         <div class="probe" style="margin-top:8px">
-          <input type="text" id="reply-to" placeholder="Recipient (Gmail only — email address)" hidden>
           <button class="act" id="btn-send">Review and send…</button>
         </div>
         <div id="send-result"></div>
@@ -890,7 +888,6 @@
       t.setAttribute("aria-selected", t === tab ? "true" : "false");
     });
     $("chan-title").textContent = tab.textContent.trim();
-    $("reply-to").hidden = currentChan !== "gmail";
     loadChannel(currentChan);
   });
 
@@ -955,13 +952,8 @@
       return;
     }
 
-    var to = $("reply-to").value.trim();
-    if (currentChan === "gmail" && !to) {
-      host.appendChild(el("div", "empty", "Gmail needs a recipient address."));
-      return;
-    }
-    var where = currentChan === "gmail" ? to
-      : currentChan === "gchat" ? "the front office Chat space"
+    var where = currentChan === "gchat"
+      ? "the front office Chat space"
       : "the front office Slack channel";
 
     var confirm = el("div", "banner warn");
@@ -991,7 +983,6 @@
       yes.textContent = "Sending…";
 
       var input = { channel: currentChan, body: body };
-      if (currentChan === "gmail") { input.to = to; input.subject = "Re: your enquiry"; }
 
       mcp.callTool(SERVER, "send_on_channel", input).then(function (res) {
         clear(host);
@@ -1081,20 +1072,17 @@
       signin.hidden = true;
       $("who-name").textContent = identity.name || identity.email;
       $("who-mail").textContent = identity.email;
-      var missing = [];
-      if (!identity.gmail) missing.push("Gmail");
-      if (!identity.chat) missing.push("Chat");
-      if (missing.length) {
-        pageBanner("warn", "Signed in without " + missing.join(" and ") + " access",
-          "Sign out and back in, and allow every permission — the channels you did not grant will fail.");
+      if (!identity.chat) {
+        pageBanner("warn", "Signed in without Google Chat access",
+          "Sign out and back in, and allow every permission — Chat will fail until you do.");
       }
     } else {
       who.hidden = true;
       signin.hidden = false;
       if (!identity.fallback) {
         pageBanner("warn", "Nobody is signed in",
-          "Gmail and Google Chat read the mailbox of whoever is signed in. Sign in with Google " +
-          "to use them. The escalation queue and the log work either way.");
+          "Google Chat acts as whoever is signed in. Sign in with Google to use it. " +
+          "Slack, the escalation queue and the log work either way.");
       }
     }
   }
@@ -1118,7 +1106,7 @@
     var q = new URLSearchParams(location.search);
     var r = q.get("signin");
     if (!r) return;
-    if (r === "denied") pageBanner("warn", "Sign-in cancelled", "Nothing changed. Gmail and Chat stay unavailable until you sign in.");
+    if (r === "denied") pageBanner("warn", "Sign-in cancelled", "Nothing changed. Google Chat stays unavailable until you sign in.");
     else if (r === "norefresh") pageBanner("crit", "Google did not return a refresh token", "Remove this app at myaccount.google.com/permissions, then sign in again.");
     else if (r === "badstate") pageBanner("crit", "Sign-in could not be verified", "The request did not match the one this browser started. Try signing in again.");
     else if (r === "error") pageBanner("crit", "Sign-in failed", q.get("detail") || "Google rejected the exchange.");

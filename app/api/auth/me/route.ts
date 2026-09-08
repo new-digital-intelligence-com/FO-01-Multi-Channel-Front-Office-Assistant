@@ -12,7 +12,6 @@ export async function GET() {
           signedIn: true,
           email: s.email,
           name: s.name ?? null,
-          gmail: s.scopes.some((x) => x.includes("gmail")),
           chat: s.scopes.some((x) => x.includes("chat")),
         }
       : {
