@@ -11,31 +11,32 @@ knowledge base, the operating contract and the interaction log.
 
 ## Reaching it
 
-Anthropic connects **from its own cloud**, not from your machine — so `localhost` is never
-reachable, even in Claude Desktop. The server needs a public HTTPS URL:
+Anthropic connects **from its own cloud**, not from your machine — `localhost` is never
+reachable, even in Claude Desktop. The server is deployed to Vercel, so the connector URL is
+the production one:
 
 ```
-npm run dev        # server on :3000
-npm run tunnel     # cloudflared -> https://<random>.trycloudflare.com
+https://<project>.vercel.app/api/mcp
 ```
 
-Then in Claude: **Settings → Connectors → Add custom connector**, URL
-`https://<random>.trycloudflare.com/api/mcp`.
+In Claude: **Settings → Connectors → Add custom connector**, paste that URL.
 
 In Claude Code the plugin's `.mcp.json` does this instead — set `FRONT_OFFICE_MCP_URL` to the
-tunnel URL, or leave it unset for `http://localhost:3000/api/mcp`, which works there because
+same URL. Unset, it falls back to `http://localhost:3000/api/mcp`, which works there because
 Claude Code connects from the same machine.
 
 ## Checking it
 
 `GET /api/health` returns the live store, the tool list, and what is configured.
 
-`store: "memory"` means the Google Sheet is not wired up: tools still work, nothing survives
-a restart. Report that honestly rather than implying the log is durable.
+`store: "memory"` means the Google Sheet is not wired up: tools still work, but on Vercel each
+serverless invocation may get a fresh instance, so **rows written in one call may be invisible
+to the next**. Do not demo durability from the memory store — report it honestly.
+`store: "google-sheet"` is the real one.
 
 ## Auth
 
-The POC runs the connector unauthenticated behind an unguessable tunnel URL. That is
-acceptable for a demo and **not** acceptable in production — anyone with the URL gets the
-tools. OAuth is the documented path for custom connectors and is the first thing to add
-before this is pointed at real customer traffic.
+The POC runs the connector unauthenticated: anyone with the URL gets the tools, and a
+`.vercel.app` URL is guessable. Acceptable for a demo, **not** for real customer data. OAuth
+is the documented path for custom connectors and is the first thing to add before this handles
+anything real.
