@@ -3,6 +3,8 @@
 # GitHub's minimum is five minutes and its timing is loose — a run can be late by several
 # minutes under load. cron-job.org gives a true one-minute cadence; this is here so the loop
 # has a scheduler that lives with the code if you would rather not depend on a third party.
+#
+# Needs repository secret TICK_SECRET, and optionally variable TICK_URL.
 name: front office tick
 
 on:
@@ -15,14 +17,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Poke the front office
+        env:
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+          TICK_URL: ${{ vars.TICK_URL }}
         run: |
-          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
-            -H "x-tick-secret: ${{ secrets.TICK_SECRET }}" \
-            "${{ vars.TICK_URL || 'https://fo-01-multi-channel-front-office-as.vercel.app/api/tick' }}")
+          url="${TICK_URL:-https://fo-01-multi-channel-front-office-as.vercel.app/api/tick}"
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -H "x-tick-secret: $TICK_SECRET" "$url")
           cat /tmp/out.json
           echo
-          # A non-2xx is a real failure; a 200 carrying errors is reported but not fatal,
-          # since one bad channel should not stop the other from being answered.
+          # A non-2xx is a real failure. A 200 carrying per-channel errors is reported but
+          # not fatal — one bad channel should not stop the other from being answered.
           if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
             echo "tick failed with HTTP $code"
             exit 1
