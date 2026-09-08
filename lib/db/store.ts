@@ -25,6 +25,12 @@ export interface Interaction {
   intent?: string;
   escalated?: boolean;
   created_at: string;
+  /**
+   * The source message's own id on its channel — a Slack `ts`, a Chat message name.
+   * The autonomous loop uses it to tell what it has already answered; without it a restart
+   * would reply to the same message again.
+   */
+  ref?: string;
 }
 
 export interface Case {
@@ -39,7 +45,7 @@ export interface Case {
 }
 
 export const INTERACTION_COLUMNS = [
-  "id", "created_at", "channel", "direction", "contact", "body", "intent", "escalated",
+  "id", "created_at", "channel", "direction", "contact", "body", "intent", "escalated", "ref",
 ] as const;
 export const CASE_COLUMNS = [
   "id", "created_at", "contact", "channel", "team", "reason", "context", "status",
@@ -150,7 +156,11 @@ async function ensureSheet(tab: string, cols: readonly string[]): Promise<void> 
     spreadsheetId: id,
     range: `${tab}!A1:Z1`,
   });
-  if (!head.data.values?.[0]?.length) {
+  const existing = head.data.values?.[0] ?? [];
+
+  // Write the header when the tab is new, and extend it when columns were added later —
+  // a sheet created before `ref` existed would otherwise silently drop that value.
+  if (existing.length < cols.length) {
     await api.spreadsheets.values.update({
       spreadsheetId: id,
       range: `${tab}!A1`,
@@ -250,6 +260,19 @@ export async function recentInteractions(limit = 20, contact?: string): Promise<
     : mem.interactions;
   const rows = contact ? all.filter((r) => r.contact === contact) : all;
   return rows.slice(0, limit);
+}
+
+/**
+ * Source-message refs already in the log, newest first.
+ *
+ * The autonomous loop checks this before answering anything, so a message is answered once
+ * even across restarts and overlapping ticks.
+ */
+export async function handledRefs(limit = 200): Promise<Set<string>> {
+  const rows = configured
+    ? (await readAll<Interaction>("interactions", INTERACTION_COLUMNS)).slice(-limit)
+    : mem.interactions.slice(0, limit);
+  return new Set(rows.map((r) => r.ref).filter((r): r is string => Boolean(r)));
 }
 
 export async function openCases(limit = 20): Promise<Case[]> {

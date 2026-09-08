@@ -186,6 +186,7 @@ export const TOOLS: ToolDef[] = [
       direction: z.enum(["inbound", "outbound"]),
       body: z.string().min(1),
       intent: z.string().optional(),
+      ref: z.string().optional().describe("The source message's id on its channel, if it has one"),
     }),
     run: async (i) => {
       const row = await logInteraction(i);

@@ -64,6 +64,8 @@ export interface ChatMessage {
   text: string;
   createTime: string;
   thread?: string;
+  /** Our own webhook posts arrive as BOT. The autonomous loop must never answer these. */
+  isApp: boolean;
 }
 
 /** Confirms the app can see its one space. Never lists the others. */
@@ -91,6 +93,7 @@ export async function readSpace(limit = 20, space?: string): Promise<ChatMessage
         m.sender?.displayName ||
         (m.sender?.type === "BOT" ? "FO-01 (app)" : m.sender?.name) ||
         "unknown",
+      isApp: m.sender?.type === "BOT",
       text: m.text ?? "",
       createTime: m.createTime ?? "",
       thread: m.thread?.name ?? undefined,

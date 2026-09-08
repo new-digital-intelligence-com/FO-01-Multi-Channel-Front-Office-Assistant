@@ -1,0 +1,29 @@
+# Free scheduler for the autonomous loop, as an alternative to cron-job.org.
+#
+# GitHub's minimum is five minutes and its timing is loose — a run can be late by several
+# minutes under load. cron-job.org gives a true one-minute cadence; this is here so the loop
+# has a scheduler that lives with the code if you would rather not depend on a third party.
+name: front office tick
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poke the front office
+        run: |
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
+            -H "x-tick-secret: ${{ secrets.TICK_SECRET }}" \
+            "${{ vars.TICK_URL || 'https://fo-01-multi-channel-front-office-as.vercel.app/api/tick' }}")
+          cat /tmp/out.json
+          echo
+          # A non-2xx is a real failure; a 200 carrying errors is reported but not fatal,
+          # since one bad channel should not stop the other from being answered.
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "tick failed with HTTP $code"
+            exit 1
+          fi
