@@ -85,7 +85,12 @@ export async function readSpace(limit = 20, space?: string): Promise<ChatMessage
     const res = await (await chat()).spaces.messages.list({ parent, pageSize: limit });
     return (res.data.messages ?? []).map((m) => ({
       name: m.name ?? "",
-      sender: m.sender?.displayName ?? m.sender?.name ?? "unknown",
+      // Webhook posts carry no displayName, only a numeric id and type BOT. Showing the raw
+      // id reads as a bug; naming it matches how the Slack adapter labels the app.
+      sender:
+        m.sender?.displayName ||
+        (m.sender?.type === "BOT" ? "FO-01 (app)" : m.sender?.name) ||
+        "unknown",
       text: m.text ?? "",
       createTime: m.createTime ?? "",
       thread: m.thread?.name ?? undefined,
