@@ -114,3 +114,81 @@ console made. Same tools, same log, different front door.
 
 Claiming the first three are done is the fastest way to lose the room. Naming them is the
 fastest way to be believed about everything else.
+
+---
+
+# Triggering the skill inside Claude
+
+The skill fires on what the request *is*, not on its name — so ask for front office work in
+ordinary words. Never say "use the front office skill"; if that is what it takes, the
+description is wrong and should be fixed instead.
+
+**Setup first:** the `FO-01` connector must be added (Settings → Connectors), and the plugin
+installed or the skill uploaded. See the skill's `references/setup.md`.
+
+## The one that shows everything
+
+> Check the front office channels, handle anything you can answer, and escalate whatever you
+> can't.
+
+Reads both channels, checks history, answers what the knowledge base covers, escalates the
+rest with context, logs all of it. One prompt, the whole loop.
+
+## Answering
+
+> A customer on Slack is asking what time we close on Saturday. Draft the reply.
+
+> Someone wants to know how much an engagement costs — what do we tell them?
+
+> What's our lead time if someone asks today?
+
+## Refusing to improvise — the important one
+
+> A customer asked what colour our logo is. Answer them.
+
+It should say the knowledge base does not cover it and offer to escalate, **not** invent a
+colour. If it ever answers this, the skill is not being followed.
+
+## Escalating
+
+> A customer emailed asking for a refund on invoice 8812 — they were charged twice.
+
+> Someone in the front office channel is angry and wants to speak to a manager.
+
+> Un client demande un remboursement sur sa dernière facture.
+
+The third is worth running in front of people: same intent, different language, same routing
+to Finance, and the reply comes back in French.
+
+## Qualifying
+
+> New enquiry from ana@lee.co — they want front office automation for a 40-person team and
+> need it live by November. Log it.
+
+## Reading channels
+
+> What's come in on the front office Slack channel?
+
+> Read the Google Chat space and tell me if anything needs a human.
+
+## Reporting
+
+> What escalations are still open?
+
+> Has sam@acme.com contacted us before?
+
+> Summarise today's front office activity — what came in, what escalated, what's still open.
+
+## Sending
+
+> Reply on Slack: we're open until 18:00 today, so there's still time.
+
+It must show the exact text and ask before sending. If it sends without asking, that is a
+bug worth reporting, not a convenience.
+
+## If nothing triggers
+
+Ask for the work, not the tool. "What's our refund policy" is front office work; "run
+answer_faq" is you doing the routing by hand. If a plainly-worded front office request does
+not trigger the skill, the fix is the `description` in `SKILL.md` — that string is the whole
+trigger surface.
