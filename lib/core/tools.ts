@@ -260,13 +260,13 @@ TOOLS.push(
     name: "read_channel",
     title: "Read a channel",
     description:
-      "Fetch recent inbound messages from one channel: `gmail` (inbox), `gchat` (a Google Chat space) " +
-      "or `slack` (the front office channel). Use to triage what has come in before replying. " +
-      "For gchat, pass `space` — call with space omitted to list the spaces available.",
+      "Fetch recent inbound messages from one channel: `gmail` (inbox), `gchat` (the front office " +
+      "Google Chat space) or `slack` (the front office Slack channel). Use to triage what has come " +
+      "in before replying. Slack and Chat are each confined to a single conversation — there is no " +
+      "channel or space to choose.",
     schema: z.object({
       channel: z.enum(["gmail", "gchat", "slack"]),
       limit: z.number().int().min(1).max(50).default(10),
-      space: z.string().optional().describe("gchat only: the space id or name. Omit to list spaces."),
       query: z.string().optional().describe("gmail only: a Gmail search query. Defaults to in:inbox."),
     }),
     outputSchema: z.object({
@@ -279,7 +279,7 @@ TOOLS.push(
       })),
       spaces: z.array(z.object({ id: z.string(), name: z.string() })),
     }),
-    run: async ({ channel, limit, space, query }) => {
+    run: async ({ channel, limit, query }) => {
       if (channel === "gmail") {
         const mails = await gmail.readInbox(limit, query ?? "in:inbox");
         const data = {
@@ -295,25 +295,17 @@ TOOLS.push(
       }
 
       if (channel === "gchat") {
-        if (!space) {
-          const spaces = await gchat.listSpaces();
-          const data = {
-            channel, kind: "spaces" as const, count: spaces.length, messages: [],
-            spaces: spaces.map((sp) => ({ id: sp.name, name: sp.displayName })),
-          };
-          const text = spaces.length === 0 ? "No Google Chat spaces visible to this account."
-            : "Pass one of these as `space`:\n" + spaces.map((sp) => `  ${sp.name} — ${sp.displayName}`).join("\n");
-          return { text, data };
-        }
-        const msgs = await gchat.readSpace(space, limit);
+        const msgs = await gchat.readSpace(limit);
         const data = {
-          channel, kind: "messages" as const, count: msgs.length, spaces: [],
+          channel, kind: "messages" as const, count: msgs.length,
+          spaces: [{ id: gchat.ALLOWED_SPACE, name: gchat.ALLOWED_SPACE_LABEL }],
           messages: msgs.map((m) => ({
             ref: m.name, at: m.createTime, from: m.sender,
             subject: null, text: m.text, threadRef: m.thread ?? null,
           })),
         };
-        const text = msgs.length === 0 ? `No messages in ${space}.`
+        const text = msgs.length === 0
+          ? `No messages in ${gchat.ALLOWED_SPACE_LABEL}.`
           : msgs.map((m) => `[${m.createTime}] ${m.sender}: ${m.text}`).join("\n");
         return { text, data };
       }
@@ -348,9 +340,8 @@ TOOLS.push(
       subject: z.string().optional().describe("gmail only: the subject being replied to"),
       threadId: z.string().optional().describe("gmail: threadId. slack: parent ts. gchat: thread name."),
       inReplyTo: z.string().optional().describe("gmail only: the Message-ID being replied to, for correct threading"),
-      space: z.string().optional().describe("gchat only: the space to post in"),
     }),
-    run: async ({ channel, body, to, subject, threadId, inReplyTo, space }) => {
+    run: async ({ channel, body, to, subject, threadId, inReplyTo }) => {
       let ref: string;
       let contact: string;
 
@@ -359,9 +350,8 @@ TOOLS.push(
         ref = await gmail.sendReply({ to, subject: subject ?? "(no subject)", body, threadId, inReplyTo });
         contact = to;
       } else if (channel === "gchat") {
-        if (!space) throw new Error("gchat requires `space`. Call read_channel with no space to list them.");
-        ref = await gchat.postToSpace(space, body, threadId);
-        contact = space;
+        ref = await gchat.postToSpace(body, threadId);
+        contact = gchat.ALLOWED_SPACE_LABEL;
       } else {
         ref = await slack.sendMessage(body, threadId);
         contact = `#${slack.ALLOWED_CHANNEL}`;

@@ -570,7 +570,7 @@
       <div class="head">
         <div>
           <h1>Channels</h1>
-          <p>Read what has arrived and reply as the front office. Slack is confined to one channel in the server's code, so no other channel is reachable from here.</p>
+          <p>Read what has arrived and reply as the front office. Slack and Google Chat are each confined to a single conversation in the server's code — there is no other channel or space reachable from here.</p>
         </div>
       </div>
 
@@ -578,13 +578,6 @@
         <button class="tab" role="tab" data-chan="slack" aria-selected="true">Slack</button>
         <button class="tab" role="tab" data-chan="gmail" aria-selected="false">Gmail</button>
         <button class="tab" role="tab" data-chan="gchat" aria-selected="false">Google&nbsp;Chat</button>
-      </div>
-
-      <div class="sec" id="chan-controls" hidden>
-        <div class="probe">
-          <select id="space-pick" aria-label="Google Chat space"></select>
-          <button class="ghost" id="btn-load-space">Open space</button>
-        </div>
       </div>
 
       <div class="sec">
@@ -888,7 +881,6 @@
   /* ---------------- channels ---------------- */
 
   var currentChan = "slack";
-  var spaces = [];
 
   $("chan-tabs").addEventListener("click", function (ev) {
     var tab = ev.target.closest(".tab");
@@ -898,7 +890,6 @@
       t.setAttribute("aria-selected", t === tab ? "true" : "false");
     });
     $("chan-title").textContent = tab.textContent.trim();
-    $("chan-controls").hidden = currentChan !== "gchat";
     $("reply-to").hidden = currentChan !== "gmail";
     loadChannel(currentChan);
   });
@@ -907,23 +898,10 @@
     var host = $("chan-body");
     clear(host);
 
-    if (payload.kind === "spaces") {
-      spaces = payload.spaces || [];
-      var pick = $("space-pick");
-      clear(pick);
-      spaces.forEach(function (sp) {
-        var o = el("option", null, sp.name);
-        o.value = sp.id;
-        pick.appendChild(o);
-      });
-      host.appendChild(el("div", "empty",
-        spaces.length ? "Pick a space above and press Open space." : "No Google Chat spaces are visible to this account."));
-      $("chan-meta").textContent = spaces.length + " spaces";
-      return;
-    }
-
     var msgs = payload.messages || [];
-    $("chan-meta").textContent = msgs.length + (msgs.length === 1 ? " message" : " messages");
+    var where = (payload.spaces && payload.spaces[0] && payload.spaces[0].name) || "";
+    $("chan-meta").textContent =
+      (where ? where + " · " : "") + msgs.length + (msgs.length === 1 ? " message" : " messages");
 
     if (!msgs.length) {
       host.appendChild(el("div", "empty", "Nothing here yet."));
@@ -950,12 +928,6 @@
     clear(host);
     host.appendChild(el("div", "loading", "Reading " + chan + "…"));
 
-    var input = { channel: chan, limit: 20 };
-    if (chan === "gchat") {
-      var pick = $("space-pick");
-      if (pick && pick.value) input.space = pick.value;
-    }
-
     mcp.callTool(SERVER, "read_channel", input).then(function (res) {
       setFresh(res);
       var p = res.payload;
@@ -969,8 +941,6 @@
       renderError(host, e, function () { loadChannel(chan); });
     });
   }
-
-  $("btn-load-space").addEventListener("click", function () { loadChannel("gchat"); });
 
   /* ---------------- send (explicit confirmation) ---------------- */
 
@@ -990,13 +960,8 @@
       host.appendChild(el("div", "empty", "Gmail needs a recipient address."));
       return;
     }
-    if (currentChan === "gchat" && !$("space-pick").value) {
-      host.appendChild(el("div", "empty", "Pick a Google Chat space first."));
-      return;
-    }
-
     var where = currentChan === "gmail" ? to
-      : currentChan === "gchat" ? ($("space-pick").selectedOptions[0] || {}).textContent || $("space-pick").value
+      : currentChan === "gchat" ? "the front office Chat space"
       : "the front office Slack channel";
 
     var confirm = el("div", "banner warn");
@@ -1027,7 +992,6 @@
 
       var input = { channel: currentChan, body: body };
       if (currentChan === "gmail") { input.to = to; input.subject = "Re: your enquiry"; }
-      if (currentChan === "gchat") { input.space = $("space-pick").value; }
 
       mcp.callTool(SERVER, "send_on_channel", input).then(function (res) {
         clear(host);
