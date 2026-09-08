@@ -1,8 +1,13 @@
 # FO-01 — Multi-Channel Front Office Assistant
 
-A front office assistant with two independent surfaces: a **web console** backed by a Next.js
-app, and a **Claude skill** that works off whatever connectors an account already has. Neither
-depends on the other, and both answer from the same rules and the same knowledge base.
+A front office assistant with two surfaces over one core: a **web console**, and a **Claude
+skill** driving an **MCP connector**. Both answer from the same rules and the same knowledge
+base, act on the same channels, and write to the same log.
+
+The split that matters: the connector carries capability — read a channel, send a message,
+write to the log — and the skill carries judgement. There is no tool that decides whether a
+question is answerable or which team owns it; that reasoning belongs in the skill, where it
+can be read and argued with, not returned as a verdict.
 
 ## What exists
 
@@ -14,6 +19,7 @@ depends on the other, and both answer from the same rules and the same knowledge
 | **Tool registry — the single source of truth** | `lib/core/tools.ts` |
 | **Behaviour contract — brand voice, escalation rules** | `lib/core/rules.md` |
 | **Knowledge base — the approved answers** | `lib/core/knowledge-base.json` |
+| MCP server (the Claude connector) | `app/api/mcp/route.ts` |
 | FAQ knowledge base + escalation triggers | `lib/core/kb.ts` |
 | Store: Google Sheet, in-memory fallback | `lib/db/store.ts` |
 | Claude plugin + skill | `plugins/fo-01-front-office/` |

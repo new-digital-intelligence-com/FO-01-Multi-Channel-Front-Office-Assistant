@@ -1,88 +1,65 @@
-# What this skill needs
+# Connecting the tools
 
-The skill carries the rules and the knowledge base, so it can decide and draft with nothing
-connected at all. Reading and sending need connectors on this account. There is no FO-01
-server to add — everything below is either Anthropic's own connector or Google's.
+The skill carries the judgement: the rules, the knowledge base, the routing. It needs one
+connector for the things that touch the outside world.
 
-## Slack
+## The FO-01 connector
 
-**Settings → Connectors → Slack.** It is in Anthropic's directory; connect the workspace the
-FO-01 app lives in. It can search channels, DMs and files, and — through Interactive Apps —
-draft and post messages without leaving Claude.
+**Claude** — Settings → Connectors → **Add custom connector**:
 
-**It does not act as the FO-01 bot.** The Slack connector authenticates as *you*, so anything
-posted through it appears from your account, not from FO-01. For a demo where the front
-office must look like the front office, post through the console instead — that uses the
-FO-01 bot token and shows the app as the author. Say which one you used rather than letting
-someone assume.
+```
+https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp
+```
 
-## Google Chat
+Name it **`FO-01`**. Anthropic connects from its own cloud, so `localhost` is never
+reachable, even in the desktop app.
 
-Anthropic has no Chat connector — its Google connectors are Gmail, Calendar and Drive. Google
-ships its own remote MCP server, added as a custom connector:
+**Claude Code** — this plugin ships `.mcp.json` pointing at the same URL, so enabling the
+plugin registers it; `/mcp` shows status. Set `FRONT_OFFICE_MCP_URL` to override.
 
-**Settings → Connectors → Add custom connector**
+## What it gives you
 
-| Field | Value |
-|---|---|
-| Server name | `Google Chat` |
-| Remote MCP server URL | `https://chatmcp.googleapis.com/mcp/v1` |
-| Advanced → OAuth client ID / secret | your own Google Cloud OAuth client |
+Seven tools, all of them actions: `read_channel`, `send_on_channel`, `get_contact_history`,
+`list_open_cases`, `escalate_case`, `qualify_enquiry`, `log_interaction`.
 
-In Google Cloud, on the same project as that OAuth client:
+**No tool decides anything.** There is deliberately no "is this answerable" or "which team"
+tool — that judgement is the skill's, from `rules.md` and `knowledge-base.md`. The console
+has two extra tools that encode the same judgement in code for its own UI; they are not
+offered here, because a verdict handed over as a tool result is a reasoning step skipped.
 
-1. Enable **Chat API** (`chat.googleapis.com`) — already on for this project
-2. Enable **Chat MCP API** (`chatmcp.googleapis.com`)
-3. Add the redirect URI **`https://claude.ai/api/mcp/auth_callback`** to the OAuth client
-4. The Chat MCP API is part of Google's **Workspace Developer Preview Program** — enrol if
-   the API will not enable
+## Why not the Slack and Google connectors
 
-It exposes `search_conversations`, `list_messages`, `search_messages`, `send_message`,
-`mark_as_read`, `mark_as_unread` and `list_memberships`.
+You could reach Slack with Anthropic's Slack connector and Chat with Google's
+`chatmcp.googleapis.com`. This connector is better for this job on three counts:
 
-This is Google's server, not ours: nothing to host, nothing to keep alive.
+- **It posts as the FO-01 bot.** The Slack connector authenticates as *you*, so a reply sent
+  through it comes from a person, not from the front office.
+- **The confinement is enforced, not followed.** Slack is pinned to one channel and Chat to
+  one space in the server; there is no channel or space argument to pass. A general connector
+  reaches everything its token can see and relies on you not to.
+- **It appends to the log.** A Drive connector cannot append to a Sheet — it would mean
+  reading the whole file, rewriting it and trashing the old one, which destroys the log if
+  the read is skipped.
 
-## The log
+It also needs no Google Cloud setup, no Chat MCP API and no Developer Preview enrolment.
 
-**Settings → Connectors → Google Drive.** Needed to rewrite `fo-01-log` — see SKILL.md →
-Logging. A Drive connector cannot append to a Sheet, so logging means reading the whole file,
-adding your rows, writing it back and trashing the old one. That needs `search_files`,
-`read_file_content`, `create_file` and `trash_file`; if any is missing, logging is not
-available and you say so.
+## Checking it
 
-The console resolves the log by **name**, so a replaced file is picked up automatically and a
-rewrite does not orphan it.
+`GET /api/health` shows the live store, the tool list and what is configured:
+<https://fo-01-multi-channel-front-office-as.vercel.app/api/health>
 
-## Degrading honestly
+`store: "memory"` means the log is not wired up: tools still work, but rows written in one
+call may be invisible to the next. Do not demo durability from it. `store: "google-sheet"` is
+the real one.
 
-| Connected | You can | Say |
-|---|---|---|
-| Nothing | draft a reply, decide the routing | "drafted — not sent, not logged" |
-| Slack only | read and send in Slack, as yourself | "sent from my account, not as FO-01; not logged" |
-| Slack + Google Chat | both channels | "not logged" unless Drive is there too |
-| + Google Drive | the whole loop | nothing special |
+## Auth
 
-The failure to avoid is describing work as done when no tool ran. A draft is a draft until
-something sends it.
-
-## Confinement is yours to keep
-
-The Slack connector reaches every channel you can see; the Chat MCP reaches every space you
-belong to. Nothing stops you posting elsewhere except this rule:
-
-**Act only in the front office Slack channel and the front office Google Chat space.**
-
-If asked to post somewhere else as the front office, say that is outside this assistant's
-remit. The console enforces the same restriction in code — no channel or space argument
-exists on its tools — which is why it is the safer place for anything routine.
+The connector is unauthenticated: anyone with the URL gets the tools, and through them the
+front office Slack channel and Chat space. Acceptable for a proof of concept, **not** for
+real customer data. OAuth is the documented path for custom connectors and is the first thing
+to add before this handles anything real.
 
 ## The console
 
-<https://fo-01-multi-channel-front-office-as.vercel.app/>
-
-Same rules, same knowledge base, its own FO-01 Slack bot token and Chat webhook, direct write
-access to the log, and the confinement enforced rather than followed. When a job here is
-blocked by a missing connector, or when a message must appear as FO-01 rather than as you,
-point at the console instead of leaving it undone.
-
-`GET /api/health` shows what the console has configured.
+<https://fo-01-multi-channel-front-office-as.vercel.app/> — the same tools with a UI. Same
+server, same channels, same log.

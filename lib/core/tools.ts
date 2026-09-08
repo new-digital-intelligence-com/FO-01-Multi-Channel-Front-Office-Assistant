@@ -36,6 +36,15 @@ export interface ToolDef {
   name: string;
   title: string;
   description: string;
+  /**
+   * Whether Claude gets this tool over MCP.
+   *
+   * The connector is the capability layer: reading and sending on a channel, and writing to
+   * the log. The judgement — which questions are answerable, how to sound, when to escalate
+   * and to whom — lives in the skill, so the tools that only encode judgement are `false`
+   * here and stay on the HTTP API for the console's own UI.
+   */
+  mcp?: boolean;
   schema: z.ZodObject<z.ZodRawShape>;
   /** Optional JSON Schema for `data`. MCP requires it before structuredContent is allowed. */
   outputSchema?: z.ZodObject<z.ZodRawShape>;
@@ -48,6 +57,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_operating_contract",
     title: "Get operating contract",
+    mcp: false,
     description:
       "Return the front office operating contract — brand voice, escalation rules and honesty rules. " +
       "Read this BEFORE drafting any reply to a customer, so the answer matches how this organisation " +
@@ -59,6 +69,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "answer_faq",
     title: "Answer an FAQ",
+    mcp: false,
     description:
       "Look up an inbound question in the front office knowledge base. Use for hours, location, pricing, " +
       "lead times, booking and service scope. Returns the approved answer, or reports that the question is " +

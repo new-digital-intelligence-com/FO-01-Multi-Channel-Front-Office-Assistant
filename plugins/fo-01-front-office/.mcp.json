@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "FO-01": {
+      "type": "http",
+      "url": "${FRONT_OFFICE_MCP_URL:-https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp}"
+    }
+  }
+}
