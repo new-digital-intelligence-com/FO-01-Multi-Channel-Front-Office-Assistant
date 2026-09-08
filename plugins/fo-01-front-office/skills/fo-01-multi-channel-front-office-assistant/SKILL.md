@@ -27,10 +27,13 @@ answering a question about hours, location, pricing, lead times, booking or scop
 
 Look at the tools available in this conversation.
 
-- **A Slack connector** — you can read and send in Slack.
-- **A Google connector** — you may be able to read the Google Chat space, and to append to
-  the interaction log if it can write to Sheets. Many Google connectors read Drive but only
-  update file *metadata*; that cannot append a row. Check rather than assume.
+- **The Slack connector** — read and send in Slack. It authenticates as *you*, so anything it
+  posts appears from your account, **not** from the FO-01 bot. Say which one sent a message
+  rather than letting someone assume it was the front office.
+- **A Google Chat connector** — Google's own remote MCP (`chatmcp.googleapis.com`), added as
+  a custom connector; Anthropic ships no Chat connector. See setup.md.
+- **A Google Drive connector** — needed to update the log, and only by rewriting the file.
+  See Logging below.
 - **Nothing relevant connected** — you can still draft a reply from the rules and the
   knowledge base. **Say plainly that nothing was sent, logged or escalated.** Never imply a
   message went out or a case was opened when no tool ran.
