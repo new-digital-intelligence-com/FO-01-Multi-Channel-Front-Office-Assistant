@@ -8,5 +8,11 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./lib/core/contract.md"],
   },
+
+  // The console is the app's front page. It is plain HTML in public/, so Vercel's CDN
+  // serves it and Next never renders it.
+  async rewrites() {
+    return [{ source: "/", destination: "/console.html" }];
+  },
 };
 export default nextConfig;

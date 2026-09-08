@@ -8,7 +8,8 @@
     "start": "next start -p 3000",
     "tunnel": "cloudflared tunnel --url http://localhost:3000",
     "sync:contract": "node scripts/sync-contract.mjs",
-    "google:auth": "node scripts/google-auth.mjs"
+    "google:auth": "node scripts/google-auth.mjs",
+    "sync:console": "node scripts/sync-console.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

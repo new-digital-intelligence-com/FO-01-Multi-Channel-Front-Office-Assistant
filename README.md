@@ -7,6 +7,8 @@ driven from the Claude UI. No web UI of its own.
 
 | Piece | Where |
 |---|---|
+| The console UI | `console/front-office-console.html` -> `public/console.html` |
+| HTTP tool dispatcher (the web UI's back end) | `app/api/tools/[tool]/route.ts` |
 | MCP server (the Claude connector) | `app/api/mcp/route.ts` |
 | Health / readiness probe | `app/api/health/route.ts` |
 | **Tool registry — the single source of truth** | `lib/core/tools.ts` |
@@ -14,6 +16,17 @@ driven from the Claude UI. No web UI of its own.
 | FAQ knowledge base + escalation triggers | `lib/core/kb.ts` |
 | Store: Google Sheet, in-memory fallback | `lib/db/store.ts` |
 | Claude plugin + skills | `plugin/` |
+
+## Two front doors, one page
+
+The console is the same file either way. Served by this app it calls `/api/tools/<name>`
+directly — open the URL, no Claude account and nothing to publish. Published as an Artifact
+inside Claude it cannot reach an external host at all (the sandbox blocks every outbound
+fetch), so it goes through the `mcp` capability to the same tools. Both transports speak the
+same `{text, payload}` envelope, so the page's rendering code is identical.
+
+`npm run sync:console` wraps the artifact-authored fragment into a standalone document for
+the web app. Run it after editing the console.
 
 ## Why it cannot drift
 
@@ -69,6 +82,7 @@ created automatically with their header rows on first write.
 
 | | |
 |---|---|
+| Console | <https://fo-01-multi-channel-front-office-as.vercel.app/> |
 | MCP endpoint | <https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp> |
 | Health | <https://fo-01-multi-channel-front-office-as.vercel.app/api/health> |
 
