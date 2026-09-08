@@ -1077,7 +1077,23 @@
     if (mcp && mcp.invalidate) mcp.invalidate(SERVER, "get_contact_history");
   });
 
-  claude.use("mcp").then(function (ns) {
+  // `claude.use` exists only in a PUBLISHED artifact. The chat preview pane exposes a
+  // different, flat window.claude with no use(), and a top-level copy of the file has no
+  // window.claude at all — calling it unguarded throws and kills the whole page.
+  var use = (typeof claude !== "undefined" && claude && typeof claude.use === "function")
+    ? claude.use.bind(claude)
+    : null;
+
+  if (!use) {
+    setConn("bad", "not published");
+    pageBanner("warn", "This is a preview, not the live console",
+      "The connector can only be reached from a published artifact. Previews and downloaded " +
+      "copies of this file have no connector access, so the rows below are examples. Publish " +
+      "the page to make it live.");
+    return;
+  }
+
+  use("mcp").then(function (ns) {
     if (!ns) {
       setConn("bad", "no connector");
       pageBanner("crit", "This console cannot reach the FO-01 connector",
