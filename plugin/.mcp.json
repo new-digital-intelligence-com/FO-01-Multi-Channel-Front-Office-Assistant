@@ -2,7 +2,7 @@
   "mcpServers": {
     "front-office": {
       "type": "http",
-      "url": "${FRONT_OFFICE_MCP_URL:-http://localhost:3000/api/mcp}"
+      "url": "${FRONT_OFFICE_MCP_URL:-https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp}"
     }
   }
 }

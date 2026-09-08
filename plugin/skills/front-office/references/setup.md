@@ -16,7 +16,7 @@ reachable, even in Claude Desktop. The server is deployed to Vercel, so the conn
 the production one:
 
 ```
-https://<project>.vercel.app/api/mcp
+https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp
 ```
 
 In Claude: **Settings → Connectors → Add custom connector**, paste that URL.
@@ -27,7 +27,8 @@ Claude Code connects from the same machine.
 
 ## Checking it
 
-`GET /api/health` returns the live store, the tool list, and what is configured.
+`GET /api/health` returns the live store, the tool list, and what is configured:
+<https://fo-01-multi-channel-front-office-as.vercel.app/api/health>
 
 `store: "memory"` means the Google Sheet is not wired up: tools still work, but on Vercel each
 serverless invocation may get a fresh instance, so **rows written in one call may be invisible

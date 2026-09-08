@@ -48,7 +48,7 @@ store is in-memory.
 
 ## Connect to Claude
 
-**Settings → Connectors → Add custom connector** → `https://<project>.vercel.app/api/mcp`
+**Settings → Connectors → Add custom connector** → `https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp`
 
 Then try: *"a customer emailed asking for a refund on invoice 8812"* — it should escalate to
 Finance rather than answer.
@@ -64,6 +64,16 @@ created automatically with their header rows on first write.
 4. `npm run google:auth` — writes `GOOGLE_REFRESH_TOKEN` into `.env.local`
 5. Copy `GOOGLE_SHEET_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
    into Vercel
+
+## Live
+
+| | |
+|---|---|
+| MCP endpoint | <https://fo-01-multi-channel-front-office-as.vercel.app/api/mcp> |
+| Health | <https://fo-01-multi-channel-front-office-as.vercel.app/api/health> |
+
+Channels wired: Gmail (read + send), Google Chat (read + post), Slack (read + post, confined
+to one channel), Google Sheet (the log).
 
 ## Not built yet
 
