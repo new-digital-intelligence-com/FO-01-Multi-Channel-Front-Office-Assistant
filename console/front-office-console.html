@@ -1,0 +1,1127 @@
+<title>Front Office Console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* ---- tokens: complete light palette on bare :root ---- */
+  :root {
+    --ground:        #f4f6f5;
+    --surface:       #ffffff;
+    --surface-sunk:  #eceeed;
+    --line:          #d9dedc;
+    --line-soft:     #e7eae9;
+    --ink:           #171d1b;
+    --ink-2:         #4a5451;
+    --ink-3:         #77817e;
+
+    --accent:        #12655a;
+    --accent-ink:    #ffffff;
+    --accent-soft:   #e3efec;
+
+    --ok:            #2c6e49;
+    --ok-soft:       #e2efe7;
+    --warn:          #8a6111;
+    --warn-soft:     #f5eddc;
+    --crit:          #a53a25;
+    --crit-soft:     #f6e4df;
+
+    --team-finance:    #8a5320;
+    --team-support:    #26597f;
+    --team-sales:      #4a6a24;
+    --team-management: #74385b;
+
+    --shadow: 0 1px 2px rgba(16, 32, 28, .06), 0 4px 14px rgba(16, 32, 28, .05);
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    --rail: 208px;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:       #0e1211;
+      --surface:      #161c1a;
+      --surface-sunk: #1d2422;
+      --line:         #2b3432;
+      --line-soft:    #222a28;
+      --ink:          #e6ebe9;
+      --ink-2:        #a4b0ac;
+      --ink-3:        #78837f;
+
+      --accent:       #4fb3a1;
+      --accent-ink:   #06231e;
+      --accent-soft:  #14302b;
+
+      --ok:           #6cbf8e;
+      --ok-soft:      #162c20;
+      --warn:         #d6a848;
+      --warn-soft:    #302713;
+      --crit:         #e2775c;
+      --crit-soft:    #351b15;
+
+      --team-finance:    #cf9a5c;
+      --team-support:    #6fa8d0;
+      --team-sales:      #97b566;
+      --team-management: #c185a6;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:       #0e1211;
+    --surface:      #161c1a;
+    --surface-sunk: #1d2422;
+    --line:         #2b3432;
+    --line-soft:    #222a28;
+    --ink:          #e6ebe9;
+    --ink-2:        #a4b0ac;
+    --ink-3:        #78837f;
+
+    --accent:       #4fb3a1;
+    --accent-ink:   #06231e;
+    --accent-soft:  #14302b;
+
+    --ok:           #6cbf8e;
+    --ok-soft:      #162c20;
+    --warn:         #d6a848;
+    --warn-soft:    #302713;
+    --crit:         #e2775c;
+    --crit-soft:    #351b15;
+
+    --team-finance:    #cf9a5c;
+    --team-support:    #6fa8d0;
+    --team-sales:      #97b566;
+    --team-management: #c185a6;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+
+  /* ---- shell ---- */
+  .shell {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  .rail {
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 20px 14px;
+  }
+
+  .brand { display: flex; flex-direction: column; gap: 3px; padding: 0 6px; }
+  .brand .mark {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .brand .name {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+  }
+
+  nav { display: flex; flex-direction: column; gap: 1px; }
+  .navbtn {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .navbtn:hover { background: var(--surface-sunk); color: var(--ink); }
+  .navbtn[aria-current="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .navbtn .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+  }
+  .navbtn[aria-current="true"] .n { color: var(--accent); }
+
+  .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 6px; }
+
+  .statline {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+  .dot.live { background: var(--ok); }
+  .dot.bad  { background: var(--crit); }
+  .dot.wait { background: var(--warn); }
+
+  /* ---- main ---- */
+  main { padding: 22px 26px 40px; min-width: 0; }
+
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .head h1 {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    text-wrap: balance;
+  }
+  .head p { margin: 4px 0 0; color: var(--ink-2); max-width: 62ch; font-size: 13px; }
+
+  .view { display: none; }
+  .view.on { display: block; }
+
+  /* ---- banner ---- */
+  .banner {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    padding: 11px 13px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .banner.warn { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); background: var(--warn-soft); }
+  .banner.crit { border-color: color-mix(in srgb, var(--crit) 40%, var(--line)); background: var(--crit-soft); }
+  .banner b { display: block; margin-bottom: 2px; }
+  .banner .body { min-width: 0; }
+  .banner code { font-family: var(--mono); font-size: 12px; }
+
+  /* ---- section ---- */
+  .sec { margin-bottom: 26px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+  }
+  .sec-head h2 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-family: var(--mono);
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- case list: severity stripe, not cards ---- */
+  .cases { display: flex; flex-direction: column; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .case {
+    display: grid;
+    grid-template-columns: 3px minmax(0, 1fr);
+    background: var(--surface);
+  }
+  .case .stripe { background: var(--ink-3); }
+  .case[data-team="Finance"]    .stripe { background: var(--team-finance); }
+  .case[data-team="Support"]    .stripe { background: var(--team-support); }
+  .case[data-team="Sales"]      .stripe { background: var(--team-sales); }
+  .case[data-team="Management"] .stripe { background: var(--team-management); }
+  .case .pad { padding: 11px 14px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .case .top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .case .reason { font-weight: 600; font-size: 13.5px; }
+  .case .ctx { color: var(--ink-2); font-size: 12.5px; }
+  .case .foot { display: flex; gap: 12px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .chip[data-team="Finance"]    { color: var(--team-finance); }
+  .chip[data-team="Support"]    { color: var(--team-support); }
+  .chip[data-team="Sales"]      { color: var(--team-sales); }
+  .chip[data-team="Management"] { color: var(--team-management); }
+  .chip.neutral { color: var(--ink-3); }
+
+  /* ---- log table ---- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.t { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.body { min-width: 22ch; }
+  .dir { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
+  .dir.in  { color: var(--accent); }
+  .dir.out { color: var(--ink-3); }
+
+  /* ---- channel messages ---- */
+  .tabs { display: flex; gap: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .tab {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink-2);
+    padding: 7px 12px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .msgs { display: flex; flex-direction: column; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .msg { background: var(--surface); padding: 11px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .msg .mtop { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .msg .from { font-weight: 600; font-size: 13px; }
+  .msg .when { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .msg .subj { font-size: 12.5px; color: var(--ink-2); font-style: italic; }
+  .msg .text { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+
+  /* ---- knowledge / probe ---- */
+  .probe { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  input[type="text"], textarea, select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 11px;
+  }
+  input[type="text"] { flex: 1 1 260px; min-width: 0; }
+  textarea { width: 100%; min-height: 88px; resize: vertical; font-size: 13px; }
+
+  button.act {
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+  }
+  button.act:hover { filter: brightness(1.08); }
+  button.act[disabled] { opacity: .5; cursor: not-allowed; filter: none; }
+  button.ghost {
+    font: inherit; font-size: 13px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    border-radius: 6px;
+    padding: 8px 13px;
+    cursor: pointer;
+  }
+  button.ghost:hover { color: var(--ink); border-color: var(--ink-3); }
+
+  .verdict {
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    border-radius: 7px;
+    padding: 13px 15px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .verdict[data-v="covered"]      { border-left-color: var(--ok);   background: var(--ok-soft); }
+  .verdict[data-v="escalate"]     { border-left-color: var(--crit); background: var(--crit-soft); }
+  .verdict[data-v="not_covered"]  { border-left-color: var(--warn); background: var(--warn-soft); }
+  .verdict .vlabel {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .verdict[data-v="covered"] .vlabel     { color: var(--ok); }
+  .verdict[data-v="escalate"] .vlabel    { color: var(--crit); }
+  .verdict[data-v="not_covered"] .vlabel { color: var(--warn); }
+  .verdict .vbody { font-size: 13.5px; }
+
+  pre.contract {
+    margin: 0;
+    padding: 15px 17px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    max-height: 460px;
+    overflow-y: auto;
+  }
+
+  /* ---- states ---- */
+  .empty, .loading {
+    padding: 26px 16px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .err {
+    padding: 12px 14px;
+    border-radius: 7px;
+    border: 1px solid color-mix(in srgb, var(--crit) 38%, var(--line));
+    background: var(--crit-soft);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .err .code { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--crit); font-weight: 600; }
+
+  .samplemark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--warn);
+    border: 1px dashed color-mix(in srgb, var(--warn) 50%, var(--line));
+    background: var(--warn-soft);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 720px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail { flex-direction: row; align-items: center; gap: 14px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; }
+    .rail nav { flex-direction: row; }
+    .rail-foot { margin-top: 0; margin-left: auto; }
+    .brand .name { white-space: nowrap; }
+    main { padding: 18px 16px 34px; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <span class="mark">FO-01</span>
+      <span class="name">Front Office Console</span>
+    </div>
+
+    <nav id="nav" aria-label="Sections">
+      <button class="navbtn" data-view="queue" aria-current="true">Queue <span class="n" id="n-queue">—</span></button>
+      <button class="navbtn" data-view="log">Log <span class="n" id="n-log">—</span></button>
+      <button class="navbtn" data-view="channels">Channels</button>
+      <button class="navbtn" data-view="knowledge">Knowledge</button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="statline"><span class="dot wait" id="dot-conn"></span><span id="txt-conn">connecting</span></div>
+      <div class="statline"><span class="dot" id="dot-store"></span><span id="txt-store">store unknown</span></div>
+      <div class="statline" id="line-fresh" hidden><span class="dot"></span><span id="txt-fresh"></span></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="pagebanner"></div>
+
+    <!-- QUEUE -->
+    <section class="view on" id="view-queue">
+      <div class="head">
+        <div>
+          <h1>Escalation queue</h1>
+          <p>Cases the assistant handed to a human, newest first. Routing follows the operating contract: billing to Finance, faults to Support, new business to Sales, anything legal or unclear to Management.</p>
+        </div>
+        <button class="ghost" id="btn-refresh-queue">Refresh</button>
+      </div>
+      <div id="queue-body"><div class="loading">Loading open cases…</div></div>
+    </section>
+
+    <!-- LOG -->
+    <section class="view" id="view-log">
+      <div class="head">
+        <div>
+          <h1>Interaction log</h1>
+          <p>Every inbound and outbound message, on every channel, in one timeline. Escalated interactions stay in the record rather than moving out of it.</p>
+        </div>
+        <button class="ghost" id="btn-refresh-log">Refresh</button>
+      </div>
+      <div id="log-body"><div class="loading">Loading interactions…</div></div>
+    </section>
+
+    <!-- CHANNELS -->
+    <section class="view" id="view-channels">
+      <div class="head">
+        <div>
+          <h1>Channels</h1>
+          <p>Read what has arrived and reply as the front office. Slack is confined to one channel in the server's code, so no other channel is reachable from here.</p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" id="chan-tabs">
+        <button class="tab" role="tab" data-chan="slack" aria-selected="true">Slack</button>
+        <button class="tab" role="tab" data-chan="gmail" aria-selected="false">Gmail</button>
+        <button class="tab" role="tab" data-chan="gchat" aria-selected="false">Google&nbsp;Chat</button>
+      </div>
+
+      <div class="sec" id="chan-controls" hidden>
+        <div class="probe">
+          <select id="space-pick" aria-label="Google Chat space"></select>
+          <button class="ghost" id="btn-load-space">Open space</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <h2 id="chan-title">Slack</h2>
+          <span class="meta" id="chan-meta"></span>
+        </div>
+        <div id="chan-body"><div class="loading">Select a channel to read.</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h2>Reply as the front office</h2></div>
+        <textarea id="reply-text" placeholder="Write the reply. Read the contract first — answer in the first sentence, reply in the language they wrote in, and never quote a price the knowledge base does not carry."></textarea>
+        <div class="probe" style="margin-top:8px">
+          <input type="text" id="reply-to" placeholder="Recipient (Gmail only — email address)" hidden>
+          <button class="act" id="btn-send">Review and send…</button>
+        </div>
+        <div id="send-result"></div>
+      </div>
+    </section>
+
+    <!-- KNOWLEDGE -->
+    <section class="view" id="view-knowledge">
+      <div class="head">
+        <div>
+          <h1>Knowledge and contract</h1>
+          <p>Check what the assistant would do with a question before a customer asks it. The verdict is the server's, not a guess made here.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h2>Question probe</h2></div>
+        <div class="probe">
+          <input type="text" id="q" value="do you offer refunds" aria-label="Customer question">
+          <button class="act" id="btn-ask">Check</button>
+        </div>
+        <div id="verdict-body"><div class="loading">Enter a question and press Check.</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <h2>Operating contract</h2>
+          <span class="meta">the live copy, served by the connector</span>
+        </div>
+        <div id="contract-body"><div class="loading">Loading contract…</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SERVER = "FO-01";
+  var mcp = null;
+  var watchers = [];
+
+  // Sample rows shown only until real data arrives. Invented, never observed data —
+  // and struck the moment the connector answers, so nothing fabricated is ever
+  // mistaken for the workspace's own record.
+  var SAMPLE_CASES = [
+    { id: "sample-1", created_at: "", contact: "example@customer.test", channel: "email",
+      team: "Finance", reason: "Refund requested on a duplicate charge",
+      context: "Asked for a refund after being billed twice. Nothing was answered — refunds are outside the knowledge base.", status: "open" }
+  ];
+  var SAMPLE_LOG = [
+    { id: "sample-a", created_at: "", channel: "webchat", direction: "inbound",
+      contact: "example@customer.test", body: "What time do you close on Saturday?", intent: "hours", escalated: false }
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function fmtTime(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso).slice(0, 19).replace("T", " ");
+    var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  /* ---------------- error copy: one branch per code, per the capability contract ------ */
+
+  function errorCopy(e) {
+    var code = (e && e.code) || "upstream_error";
+    switch (code) {
+      case "needs_reauth":
+        return { code: code, msg: "The " + SERVER + " connector needs signing in again. Reconnect it in claude.ai Settings → Connectors, then refresh.", retry: false };
+      case "server_not_connected":
+        return { code: code, msg: "No connector named " + SERVER + " is set up on this account. Add it in Settings → Connectors, pointing at the FO-01 server's /api/mcp URL.", retry: false };
+      case "not_granted":
+        return { code: code, msg: "This page has not been granted access to " + SERVER + ". Reload and allow it when asked.", retry: false };
+      case "blocked_by_policy":
+        return { code: code, msg: "Your workspace policy blocks calls to " + SERVER + ". An admin has to allow it.", retry: false };
+      case "approval_required":
+        return { code: code, msg: "This call is waiting on approval before it can run.", retry: false };
+      case "rate_limited":
+        return { code: code, msg: "Too many calls to " + SERVER + " just now. It will work again shortly.", retry: true };
+      case "server_unavailable":
+        return { code: code, msg: "The FO-01 server did not answer. It may be starting up — try again in a moment.", retry: true };
+      case "tool_error":
+        return { code: code, msg: (e && e.message) || "The tool ran and reported a failure.", retry: false };
+      case "bad_request":
+        return { code: code, msg: "The console sent arguments this tool does not accept. " + ((e && e.message) || ""), retry: false };
+      case "cancelled":
+        return { code: code, msg: "The call was cancelled.", retry: false };
+      default:
+        return { code: code, msg: (e && e.message) || "The call did not complete.", retry: false };
+    }
+  }
+
+  function renderError(host, e, onRetry) {
+    var c = errorCopy(e);
+    clear(host);
+    var box = el("div", "err");
+    box.appendChild(el("span", "code", c.code.replace(/_/g, " ")));
+    box.appendChild(el("div", null, c.msg));
+    if (c.retry && onRetry) {
+      var b = el("button", "ghost", "Try again");
+      b.style.alignSelf = "flex-start";
+      b.addEventListener("click", onRetry);
+      box.appendChild(b);
+    }
+    host.appendChild(box);
+  }
+
+  var AUTHZ = { needs_reauth: 1, server_not_connected: 1, blocked_by_policy: 1, approval_required: 1, not_granted: 1 };
+
+  /* ---------------- connection status ---------------- */
+
+  function setConn(state, text) {
+    var dot = $("dot-conn");
+    dot.className = "dot " + (state === "live" ? "live" : state === "bad" ? "bad" : "wait");
+    $("txt-conn").textContent = text;
+  }
+
+  function setStore(store) {
+    var dot = $("dot-store");
+    if (!store) { dot.className = "dot"; $("txt-store").textContent = "store unknown"; return; }
+    var durable = store === "google-sheet";
+    dot.className = "dot " + (durable ? "live" : "wait");
+    $("txt-store").textContent = durable ? "sheet · durable" : store + " · not durable";
+    if (!durable) {
+      pageBanner("warn", "Nothing here is being saved",
+        "The server is running on its in-memory store, so rows vanish between requests. Wire the Google Sheet before showing this as a record.");
+    }
+  }
+
+  function setFresh(result) {
+    var line = $("line-fresh");
+    if (result && result.cache && result.cache.storedAt) {
+      line.hidden = false;
+      $("txt-fresh").textContent = "as of " + fmtTime(new Date(result.cache.storedAt).toISOString());
+    } else {
+      line.hidden = true;
+    }
+  }
+
+  function pageBanner(kind, title, body) {
+    var host = $("pagebanner");
+    clear(host);
+    var b = el("div", "banner " + kind);
+    var wrap = el("div", "body");
+    wrap.appendChild(el("b", null, title));
+    wrap.appendChild(el("div", null, body));
+    b.appendChild(wrap);
+    host.appendChild(b);
+  }
+
+  /* ---------------- navigation ---------------- */
+
+  var views = ["queue", "log", "channels", "knowledge"];
+  $("nav").addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".navbtn");
+    if (!btn) return;
+    var want = btn.getAttribute("data-view");
+    views.forEach(function (v) {
+      $("view-" + v).classList.toggle("on", v === want);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".navbtn"), function (b) {
+      b.setAttribute("aria-current", b === btn ? "true" : "false");
+    });
+    if (want === "knowledge") loadContract();
+    if (want === "channels") loadChannel(currentChan);
+  });
+
+  /* ---------------- queue ---------------- */
+
+  function renderCases(rows, isSample) {
+    var host = $("queue-body");
+    clear(host);
+    $("n-queue").textContent = isSample ? "—" : String(rows.length);
+
+    if (!rows.length) {
+      host.appendChild(el("div", "empty", "No open escalations. Everything inbound was answered without a human."));
+      return;
+    }
+
+    if (isSample) {
+      var m = el("div");
+      m.style.marginBottom = "10px";
+      m.appendChild(el("span", "samplemark", "example row — not your data"));
+      host.appendChild(m);
+    }
+
+    var list = el("div", "cases");
+    rows.forEach(function (c) {
+      var row = el("div", "case");
+      row.setAttribute("data-team", c.team);
+      row.appendChild(el("div", "stripe"));
+
+      var pad = el("div", "pad");
+      var top = el("div", "top");
+      var chip = el("span", "chip", c.team);
+      chip.setAttribute("data-team", c.team);
+      top.appendChild(chip);
+      top.appendChild(el("span", "reason", c.reason));
+      pad.appendChild(top);
+
+      pad.appendChild(el("div", "ctx", c.context));
+
+      var foot = el("div", "foot");
+      foot.appendChild(el("span", null, c.contact));
+      foot.appendChild(el("span", null, "via " + c.channel));
+      foot.appendChild(el("span", null, fmtTime(c.created_at)));
+      pad.appendChild(foot);
+
+      row.appendChild(pad);
+      list.appendChild(row);
+    });
+    host.appendChild(list);
+  }
+
+  function renderLog(rows, isSample) {
+    var host = $("log-body");
+    clear(host);
+    $("n-log").textContent = isSample ? "—" : String(rows.length);
+
+    if (!rows.length) {
+      host.appendChild(el("div", "empty", "Nothing logged yet. Interactions appear here as they arrive on any channel."));
+      return;
+    }
+
+    if (isSample) {
+      var m = el("div");
+      m.style.marginBottom = "10px";
+      m.appendChild(el("span", "samplemark", "example row — not your data"));
+      host.appendChild(m);
+    }
+
+    var wrap = el("div", "tablewrap");
+    var t = el("table");
+    var thead = el("thead");
+    var hr = el("tr");
+    ["When", "Channel", "Dir", "Contact", "Message"].forEach(function (h) {
+      hr.appendChild(el("th", null, h));
+    });
+    thead.appendChild(hr);
+    t.appendChild(thead);
+
+    var tb = el("tbody");
+    rows.forEach(function (r) {
+      var tr = el("tr");
+      tr.appendChild(el("td", "t", fmtTime(r.created_at)));
+
+      var ch = el("td");
+      var chip = el("span", "chip neutral", r.channel);
+      ch.appendChild(chip);
+      if (r.escalated) {
+        var esc = el("span", "chip", "escalated");
+        esc.style.color = "var(--crit)";
+        esc.style.marginLeft = "6px";
+        ch.appendChild(esc);
+      }
+      tr.appendChild(ch);
+
+      tr.appendChild((function () {
+        var td = el("td");
+        td.appendChild(el("span", "dir " + (r.direction === "inbound" ? "in" : "out"),
+          r.direction === "inbound" ? "in ←" : "out →"));
+        return td;
+      })());
+
+      tr.appendChild(el("td", "t", r.contact));
+      tr.appendChild(el("td", "body", r.body));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    wrap.appendChild(t);
+    host.appendChild(wrap);
+  }
+
+  /* ---------------- channels ---------------- */
+
+  var currentChan = "slack";
+  var spaces = [];
+
+  $("chan-tabs").addEventListener("click", function (ev) {
+    var tab = ev.target.closest(".tab");
+    if (!tab) return;
+    currentChan = tab.getAttribute("data-chan");
+    Array.prototype.forEach.call(document.querySelectorAll("#chan-tabs .tab"), function (t) {
+      t.setAttribute("aria-selected", t === tab ? "true" : "false");
+    });
+    $("chan-title").textContent = tab.textContent.trim();
+    $("chan-controls").hidden = currentChan !== "gchat";
+    $("reply-to").hidden = currentChan !== "gmail";
+    loadChannel(currentChan);
+  });
+
+  function renderMessages(payload) {
+    var host = $("chan-body");
+    clear(host);
+
+    if (payload.kind === "spaces") {
+      spaces = payload.spaces || [];
+      var pick = $("space-pick");
+      clear(pick);
+      spaces.forEach(function (sp) {
+        var o = el("option", null, sp.name);
+        o.value = sp.id;
+        pick.appendChild(o);
+      });
+      host.appendChild(el("div", "empty",
+        spaces.length ? "Pick a space above and press Open space." : "No Google Chat spaces are visible to this account."));
+      $("chan-meta").textContent = spaces.length + " spaces";
+      return;
+    }
+
+    var msgs = payload.messages || [];
+    $("chan-meta").textContent = msgs.length + (msgs.length === 1 ? " message" : " messages");
+
+    if (!msgs.length) {
+      host.appendChild(el("div", "empty", "Nothing here yet."));
+      return;
+    }
+
+    var list = el("div", "msgs");
+    msgs.forEach(function (m) {
+      var row = el("div", "msg");
+      var top = el("div", "mtop");
+      top.appendChild(el("span", "from", m.from));
+      top.appendChild(el("span", "when", fmtTime(m.at)));
+      row.appendChild(top);
+      if (m.subject) row.appendChild(el("div", "subj", m.subject));
+      row.appendChild(el("div", "text", m.text));
+      list.appendChild(row);
+    });
+    host.appendChild(list);
+  }
+
+  function loadChannel(chan) {
+    if (!mcp) return;
+    var host = $("chan-body");
+    clear(host);
+    host.appendChild(el("div", "loading", "Reading " + chan + "…"));
+
+    var input = { channel: chan, limit: 20 };
+    if (chan === "gchat") {
+      var pick = $("space-pick");
+      if (pick && pick.value) input.space = pick.value;
+    }
+
+    mcp.callTool(SERVER, "read_channel", input).then(function (res) {
+      setFresh(res);
+      var p = res.payload;
+      if (!p || typeof p !== "object") {
+        clear(host);
+        host.appendChild(el("div", "empty", String(p == null ? "No data returned." : p)));
+        return;
+      }
+      renderMessages(p);
+    }).catch(function (e) {
+      renderError(host, e, function () { loadChannel(chan); });
+    });
+  }
+
+  $("btn-load-space").addEventListener("click", function () { loadChannel("gchat"); });
+
+  /* ---------------- send (explicit confirmation) ---------------- */
+
+  $("btn-send").addEventListener("click", function () {
+    if (!mcp) return;
+    var body = $("reply-text").value.trim();
+    var host = $("send-result");
+    clear(host);
+
+    if (!body) {
+      host.appendChild(el("div", "empty", "Write the reply first."));
+      return;
+    }
+
+    var to = $("reply-to").value.trim();
+    if (currentChan === "gmail" && !to) {
+      host.appendChild(el("div", "empty", "Gmail needs a recipient address."));
+      return;
+    }
+    if (currentChan === "gchat" && !$("space-pick").value) {
+      host.appendChild(el("div", "empty", "Pick a Google Chat space first."));
+      return;
+    }
+
+    var where = currentChan === "gmail" ? to
+      : currentChan === "gchat" ? ($("space-pick").selectedOptions[0] || {}).textContent || $("space-pick").value
+      : "the front office Slack channel";
+
+    var confirm = el("div", "banner warn");
+    var wrap = el("div", "body");
+    wrap.appendChild(el("b", null, "Send this to " + where + "?"));
+    wrap.appendChild(el("div", null, "A message to a real person cannot be recalled."));
+    var q = el("div", null, "“" + body + "”");
+    q.style.margin = "8px 0";
+    q.style.color = "var(--ink)";
+    wrap.appendChild(q);
+
+    var row = el("div");
+    row.style.display = "flex";
+    row.style.gap = "8px";
+    var yes = el("button", "act", "Send now");
+    var no = el("button", "ghost", "Cancel");
+    row.appendChild(yes);
+    row.appendChild(no);
+    wrap.appendChild(row);
+    confirm.appendChild(wrap);
+    host.appendChild(confirm);
+
+    no.addEventListener("click", function () { clear(host); });
+
+    yes.addEventListener("click", function () {
+      yes.disabled = true;
+      yes.textContent = "Sending…";
+
+      var input = { channel: currentChan, body: body };
+      if (currentChan === "gmail") { input.to = to; input.subject = "Re: your enquiry"; }
+      if (currentChan === "gchat") { input.space = $("space-pick").value; }
+
+      mcp.callTool(SERVER, "send_on_channel", input).then(function (res) {
+        clear(host);
+        var ok = el("div", "banner");
+        var w = el("div", "body");
+        w.appendChild(el("b", null, "Sent"));
+        w.appendChild(el("div", null, typeof res.payload === "string" ? res.payload : "The message went out and was logged."));
+        ok.appendChild(w);
+        host.appendChild(ok);
+        $("reply-text").value = "";
+        loadChannel(currentChan);
+        if (mcp.invalidate) mcp.invalidate(SERVER, "get_contact_history");
+      }).catch(function (e) {
+        // A send that fails ambiguously must not be auto-retried: re-read instead.
+        renderError(host, e, null);
+        if (e && (e.code === "server_unavailable" || e.code === "upstream_error")) {
+          host.appendChild(el("div", "empty",
+            "This failure does not prove the message was not sent. Read the channel before trying again."));
+        }
+      });
+    });
+  });
+
+  /* ---------------- knowledge ---------------- */
+
+  function ask() {
+    if (!mcp) return;
+    var q = $("q").value.trim();
+    var host = $("verdict-body");
+    clear(host);
+    if (!q) { host.appendChild(el("div", "empty", "Type a question first.")); return; }
+    host.appendChild(el("div", "loading", "Checking…"));
+
+    mcp.callTool(SERVER, "answer_faq", { question: q }).then(function (res) {
+      var p = res.payload;
+      clear(host);
+      if (!p || typeof p !== "object") {
+        host.appendChild(el("div", "empty", String(p == null ? "No verdict returned." : p)));
+        return;
+      }
+      var box = el("div", "verdict");
+      box.setAttribute("data-v", p.verdict);
+      var label = p.verdict === "covered" ? "Answered from the knowledge base"
+        : p.verdict === "escalate" ? "Escalation trigger — routed to " + p.escalateTo
+        : "Not covered — no answer given";
+      box.appendChild(el("div", "vlabel", label));
+      box.appendChild(el("div", "vbody",
+        p.verdict === "covered" ? p.answer
+          : p.verdict === "escalate" ? "This is not an FAQ. The assistant will not answer it even if it resembles a question we cover."
+          : "The assistant will not improvise. It escalates, or asks one clarifying question."));
+      var meta = el("div", "meta");
+      meta.textContent = (p.entryId ? "matched “" + p.entryId + "” · " : "") + "score " + p.score;
+      box.appendChild(meta);
+      host.appendChild(box);
+    }).catch(function (e) {
+      renderError(host, e, function () { ask(); });
+    });
+  }
+
+  $("btn-ask").addEventListener("click", ask);
+  $("q").addEventListener("keydown", function (e) { if (e.key === "Enter") ask(); });
+
+  var contractLoaded = false;
+  function loadContract() {
+    if (!mcp || contractLoaded) return;
+    var host = $("contract-body");
+    mcp.callTool(SERVER, "get_operating_contract", {}).then(function (res) {
+      contractLoaded = true;
+      clear(host);
+      var pre = el("pre", "contract", typeof res.payload === "string" ? res.payload : JSON.stringify(res.payload, null, 2));
+      host.appendChild(pre);
+    }).catch(function (e) {
+      renderError(host, e, function () { loadContract(); });
+    });
+  }
+
+  /* ---------------- boot ---------------- */
+
+  renderCases(SAMPLE_CASES, true);
+  renderLog(SAMPLE_LOG, true);
+
+  $("btn-refresh-queue").addEventListener("click", function () {
+    if (mcp && mcp.invalidate) mcp.invalidate(SERVER, "list_open_cases");
+  });
+  $("btn-refresh-log").addEventListener("click", function () {
+    if (mcp && mcp.invalidate) mcp.invalidate(SERVER, "get_contact_history");
+  });
+
+  claude.use("mcp").then(function (ns) {
+    if (!ns) {
+      setConn("bad", "no connector");
+      pageBanner("crit", "This console cannot reach the FO-01 connector",
+        "Open this page in Claude on an account that has the FO-01 connector added, and allow it when asked. Everything below is an example until then.");
+      return;
+    }
+    mcp = ns;
+    setConn("live", "connected");
+
+    // Reads use watchTool: replays cache, refreshes when stale, and coalesces.
+    watchers.push(mcp.watchTool(SERVER, "list_open_cases", { limit: 50 }, function (ev) {
+      var host = $("queue-body");
+      if (ev.type === "error") {
+        if (AUTHZ[ev.error && ev.error.code]) renderError(host, ev.error, null);
+        return; // transient: keep last-good data
+      }
+      setFresh(ev.result);
+      var p = ev.result.payload;
+      if (p && typeof p === "object") {
+        setStore(p.store);
+        renderCases(p.cases || [], false);
+      }
+    }, { refetchInterval: 60000 }));
+
+    watchers.push(mcp.watchTool(SERVER, "get_contact_history", { limit: 40 }, function (ev) {
+      var host = $("log-body");
+      if (ev.type === "error") {
+        if (AUTHZ[ev.error && ev.error.code]) renderError(host, ev.error, null);
+        return;
+      }
+      var p = ev.result.payload;
+      if (p && typeof p === "object") {
+        setStore(p.store);
+        renderLog(p.interactions || [], false);
+      }
+    }, { refetchInterval: 60000 }));
+
+    loadChannel(currentChan);
+  }).catch(function () {
+    setConn("bad", "unavailable");
+  });
+
+  window.addEventListener("pagehide", function () {
+    watchers.forEach(function (u) { try { u(); } catch (e) {} });
+  });
+})();
+</script>
