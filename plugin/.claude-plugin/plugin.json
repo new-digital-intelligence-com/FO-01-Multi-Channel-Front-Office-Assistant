@@ -1,0 +1,8 @@
+{
+  "name": "front-office",
+  "displayName": "FO-01 Multi-Channel Front Office Assistant",
+  "description": "Handle inbound requests across phone, e-mail, web chat and messaging from a single agent: answer FAQs, qualify enquiries, escalate complex cases to the right human team with full context, and log every interaction.",
+  "author": { "name": "FO-01" },
+  "license": "UNLICENSED",
+  "keywords": ["front-office", "customer-service", "multi-channel", "escalation", "intake"]
+}
