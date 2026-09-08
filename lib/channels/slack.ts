@@ -1,0 +1,152 @@
+/**
+ * Slack channel adapter.
+ *
+ * HARD CONSTRAINT: this app is confined to ONE channel. The operator asked for it explicitly,
+ * and the bot token's scopes are workspace-wide, so the restriction has to live here in code
+ * rather than in a prompt a model could talk itself out of. Every read and every write
+ * resolves the channel name to an id and refuses anything else.
+ *
+ * Read + send only. No Events API, no Socket Mode, no public URL — Claude pulls on demand.
+ */
+const TOKEN = process.env.SLACK_BOT_TOKEN;
+/** The only channel this app may ever touch. */
+export const ALLOWED_CHANNEL = process.env.SLACK_CHANNEL ?? "ai-employee-fo-01-multi-channel-front-office-assistant";
+
+export const slackConfigured = Boolean(TOKEN);
+
+interface SlackResponse {
+  ok: boolean;
+  error?: string;
+  [k: string]: unknown;
+}
+
+async function api(method: string, body: Record<string, unknown> = {}): Promise<SlackResponse> {
+  if (!TOKEN) {
+    throw new Error(
+      "Slack is not configured. Set SLACK_BOT_TOKEN to a bot token (starts with `xoxb-`). " +
+        "An app-configuration token (`xoxe.xoxp-`) cannot read or post messages.",
+    );
+  }
+  const res = await fetch(`https://slack.com/api/${method}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as SlackResponse;
+  if (!json.ok) {
+    const hint =
+      json.error === "missing_scope"
+        ? " — reinstall the app with the scope it names"
+        : json.error === "not_in_channel"
+          ? ` — invite the bot with \`/invite @FO-01\` in #${ALLOWED_CHANNEL}`
+          : json.error === "invalid_auth" || json.error === "not_authed"
+            ? " — SLACK_BOT_TOKEN is wrong or expired"
+            : "";
+    throw new Error(`Slack ${method} failed: ${json.error}${hint}`);
+  }
+  return json;
+}
+
+interface Conversation {
+  id: string;
+  name: string;
+}
+
+let channelIdCache: string | null = null;
+
+/**
+ * Resolves the one allowed channel to its id. Anything not matching ALLOWED_CHANNEL is
+ * rejected before a request is made, so a wrong name cannot reach another channel.
+ */
+export async function resolveChannel(name?: string): Promise<string> {
+  const wanted = (name ?? ALLOWED_CHANNEL).replace(/^#/, "");
+  if (wanted !== ALLOWED_CHANNEL) {
+    throw new Error(
+      `Refused: this app may only act in #${ALLOWED_CHANNEL}, not #${wanted}. ` +
+        `This is a hard restriction, not a preference.`,
+    );
+  }
+  if (channelIdCache) return channelIdCache;
+
+  let cursor: string | undefined;
+  do {
+    const res = await api("conversations.list", {
+      types: "public_channel,private_channel",
+      limit: 200,
+      exclude_archived: true,
+      ...(cursor ? { cursor } : {}),
+    });
+    const found = (res.channels as Conversation[]).find((c) => c.name === ALLOWED_CHANNEL);
+    if (found) {
+      channelIdCache = found.id;
+      return found.id;
+    }
+    cursor = (res.response_metadata as { next_cursor?: string } | undefined)?.next_cursor || undefined;
+  } while (cursor);
+
+  throw new Error(
+    `Channel #${ALLOWED_CHANNEL} not found. Either it does not exist, or the bot has not been ` +
+      `invited to it — run \`/invite @FO-01\` in that channel.`,
+  );
+}
+
+export interface SlackMessage {
+  ts: string;
+  user: string;
+  userName: string;
+  text: string;
+  threadTs?: string;
+  isBot: boolean;
+}
+
+const userNames = new Map<string, string>();
+
+async function userName(id: string): Promise<string> {
+  if (!id) return "unknown";
+  const hit = userNames.get(id);
+  if (hit) return hit;
+  try {
+    const res = await api("users.info", { user: id });
+    const u = res.user as { real_name?: string; name?: string };
+    const name = u.real_name ?? u.name ?? id;
+    userNames.set(id, name);
+    return name;
+  } catch {
+    return id; // a missing users:read scope should not break message reading
+  }
+}
+
+export async function readMessages(limit = 20): Promise<SlackMessage[]> {
+  const channel = await resolveChannel();
+  const res = await api("conversations.history", { channel, limit });
+  const raw = res.messages as {
+    ts: string; user?: string; text?: string; thread_ts?: string; bot_id?: string; subtype?: string;
+  }[];
+
+  const msgs: SlackMessage[] = [];
+  for (const m of raw) {
+    if (m.subtype === "channel_join" || m.subtype === "channel_leave") continue;
+    msgs.push({
+      ts: m.ts,
+      user: m.user ?? "",
+      userName: m.user ? await userName(m.user) : "app",
+      text: m.text ?? "",
+      threadTs: m.thread_ts,
+      isBot: Boolean(m.bot_id),
+    });
+  }
+  return msgs.reverse(); // oldest first reads like a conversation
+}
+
+export async function sendMessage(text: string, threadTs?: string): Promise<string> {
+  const channel = await resolveChannel();
+  const res = await api("chat.postMessage", {
+    channel,
+    text,
+    ...(threadTs ? { thread_ts: threadTs } : {}),
+  });
+  return res.ts as string;
+}

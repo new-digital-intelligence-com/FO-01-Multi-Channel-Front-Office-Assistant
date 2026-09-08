@@ -17,6 +17,9 @@ import {
   backend, logInteraction, openCase, openCases, recentInteractions,
   type Channel,
 } from "@/lib/db/store";
+import * as gmail from "@/lib/channels/gmail";
+import * as gchat from "@/lib/channels/gchat";
+import * as slack from "@/lib/channels/slack";
 
 const CHANNELS = ["phone", "email", "webchat", "gchat", "whatsapp", "slack", "claude"] as const;
 const TEAMS = ["Finance", "Support", "Sales", "Management"] as const;
@@ -188,5 +191,94 @@ export const TOOLS: ToolDef[] = [
     },
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Channel tools. Pull-based: Claude reads a channel when it wants to, and sends
+// when it decides to. Every send is logged, so the record covers both sides.
+// ---------------------------------------------------------------------------
+
+TOOLS.push(
+  {
+    name: "read_channel",
+    title: "Read a channel",
+    description:
+      "Fetch recent inbound messages from one channel: `gmail` (inbox), `gchat` (a Google Chat space) " +
+      "or `slack` (the front office channel). Use to triage what has come in before replying. " +
+      "For gchat, pass `space` — call with space omitted to list the spaces available.",
+    schema: z.object({
+      channel: z.enum(["gmail", "gchat", "slack"]),
+      limit: z.number().int().min(1).max(50).default(10),
+      space: z.string().optional().describe("gchat only: the space id or name. Omit to list spaces."),
+      query: z.string().optional().describe("gmail only: a Gmail search query. Defaults to in:inbox."),
+    }),
+    run: async ({ channel, limit, space, query }) => {
+      if (channel === "gmail") {
+        const mails = await gmail.readInbox(limit, query ?? "in:inbox");
+        if (!mails.length) return "Inbox is empty for that query.";
+        return mails
+          .map((m) => `[${m.date}] from ${m.from}\n  subject: ${m.subject}\n  ${m.snippet}\n  threadId=${m.threadId} messageId=${m.messageId ?? "-"}`)
+          .join("\n\n");
+      }
+
+      if (channel === "gchat") {
+        if (!space) {
+          const spaces = await gchat.listSpaces();
+          if (!spaces.length) return "No Google Chat spaces visible to this account.";
+          return "Pass one of these as `space`:\n" + spaces.map((s) => `  ${s.name} — ${s.displayName}`).join("\n");
+        }
+        const msgs = await gchat.readSpace(space, limit);
+        if (!msgs.length) return `No messages in ${space}.`;
+        return msgs.map((m) => `[${m.createTime}] ${m.sender}: ${m.text}`).join("\n");
+      }
+
+      const msgs = await slack.readMessages(limit);
+      if (!msgs.length) return `No messages in #${slack.ALLOWED_CHANNEL}.`;
+      return msgs
+        .map((m) => `[${new Date(Number(m.ts) * 1000).toISOString()}] ${m.userName}${m.isBot ? " (app)" : ""}: ${m.text}  ts=${m.ts}`)
+        .join("\n");
+    },
+  },
+
+  {
+    name: "send_on_channel",
+    title: "Send a reply on a channel",
+    description:
+      "Send a message as the front office on `gmail`, `gchat` or `slack`, and log it. This is " +
+      "visible to a real person and cannot be recalled — show the customer the exact text and get " +
+      "agreement before calling it. Read the operating contract first so the wording matches how we " +
+      "speak everywhere else.",
+    schema: z.object({
+      channel: z.enum(["gmail", "gchat", "slack"]),
+      body: z.string().min(1).describe("The exact message text to send"),
+      to: z.string().optional().describe("gmail only: recipient address"),
+      subject: z.string().optional().describe("gmail only: the subject being replied to"),
+      threadId: z.string().optional().describe("gmail: threadId. slack: parent ts. gchat: thread name."),
+      inReplyTo: z.string().optional().describe("gmail only: the Message-ID being replied to, for correct threading"),
+      space: z.string().optional().describe("gchat only: the space to post in"),
+    }),
+    run: async ({ channel, body, to, subject, threadId, inReplyTo, space }) => {
+      let ref: string;
+      let contact: string;
+
+      if (channel === "gmail") {
+        if (!to) throw new Error("gmail requires `to`.");
+        ref = await gmail.sendReply({ to, subject: subject ?? "(no subject)", body, threadId, inReplyTo });
+        contact = to;
+      } else if (channel === "gchat") {
+        if (!space) throw new Error("gchat requires `space`. Call read_channel with no space to list them.");
+        ref = await gchat.postToSpace(space, body, threadId);
+        contact = space;
+      } else {
+        ref = await slack.sendMessage(body, threadId);
+        contact = `#${slack.ALLOWED_CHANNEL}`;
+      }
+
+      await logInteraction({
+        channel: channel as Channel, direction: "outbound", contact, body, intent: "reply",
+      });
+      return `Sent on ${channel} to ${contact} (ref ${ref}). Logged (store: ${backend()}).`;
+    },
+  },
+);
 
 export const TOOLS_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));

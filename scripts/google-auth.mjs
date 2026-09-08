@@ -28,7 +28,13 @@ if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
 const url = client.generateAuthUrl({
   access_type: "offline",
   prompt: "consent", // force a refresh_token even if previously granted
-  scope: ["https://www.googleapis.com/auth/spreadsheets"],
+  scope: [
+    "https://www.googleapis.com/auth/spreadsheets",   // the interaction log
+    "https://www.googleapis.com/auth/gmail.readonly", // read inbound mail
+    "https://www.googleapis.com/auth/gmail.send",     // send replies
+    "https://www.googleapis.com/auth/chat.spaces.readonly",
+    "https://www.googleapis.com/auth/chat.messages",
+  ],
 });
 
 console.log("\nOpen this URL, sign in, allow:\n\n" + url + "\n");

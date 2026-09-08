@@ -8,7 +8,9 @@ export async function GET() {
     store: backend(),
     tools: TOOLS.map((t) => t.name),
     configured: {
-      anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+      slack: Boolean(process.env.SLACK_BOT_TOKEN?.startsWith("xoxb-")),
+      slackChannel: process.env.SLACK_CHANNEL ?? "ai-employee-fo-01-multi-channel-front-office-assistant",
+      google: Boolean(process.env.GOOGLE_REFRESH_TOKEN),
       sheet: Boolean(
         process.env.GOOGLE_SHEET_ID &&
           ((process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) ||
