@@ -8,7 +8,7 @@
  */
 import { createServer } from "node:http";
 import { google } from "googleapis";
-import { readFileSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const env = Object.fromEntries(
   readFileSync(".env.local", "utf8")
@@ -44,7 +44,14 @@ const server = createServer(async (req, res) => {
     const { tokens } = await client.getToken(code);
     res.end("Done. You can close this tab and go back to the terminal.");
     if (tokens.refresh_token) {
-      appendFileSync(".env.local", `\nGOOGLE_REFRESH_TOKEN=${tokens.refresh_token}\n`);
+      // Replace the existing line rather than appending, so re-running does not leave
+      // two GOOGLE_REFRESH_TOKEN entries with the later (stale) one winning.
+      const current = readFileSync(".env.local", "utf8");
+      const line = `GOOGLE_REFRESH_TOKEN=${tokens.refresh_token}`;
+      const next = /^GOOGLE_REFRESH_TOKEN=.*$/m.test(current)
+        ? current.replace(/^GOOGLE_REFRESH_TOKEN=.*$/m, line)
+        : current.trimEnd() + "\n" + line + "\n";
+      writeFileSync(".env.local", next);
       console.log("\nrefresh token written to .env.local\n");
     } else {
       console.log("\nNo refresh_token returned — revoke the app's access and re-run.\n");
