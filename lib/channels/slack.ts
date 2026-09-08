@@ -27,13 +27,22 @@ async function api(method: string, body: Record<string, unknown> = {}): Promise<
         "An app-configuration token (`xoxe.xoxp-`) cannot read or post messages.",
     );
   }
+  // Form encoding, not JSON. Several read methods (users.info among them) ignore a JSON
+  // body entirely and answer as though the argument were absent — users.info returns
+  // `user_not_found` for a user that plainly exists. Form encoding works for every method
+  // we call here, so use it throughout rather than per-method.
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(body)) {
+    if (v !== undefined && v !== null) form.set(k, String(v));
+  }
+
   const res = await fetch(`https://slack.com/api/${method}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${TOKEN}`,
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
     },
-    body: JSON.stringify(body),
+    body: form,
   });
   const json = (await res.json()) as SlackResponse;
   if (!json.ok) {
@@ -114,8 +123,11 @@ async function userName(id: string): Promise<string> {
     const name = u.real_name ?? u.name ?? id;
     userNames.set(id, name);
     return name;
-  } catch {
-    return id; // a missing users:read scope should not break message reading
+  } catch (err) {
+    // A missing users:read scope should not break message reading, but the raw id is a
+    // poor thing to show — remember it so the failure is visible once, not per message.
+    console.warn(`slack users.info failed for ${id}:`, (err as Error).message);
+    return id;
   }
 }
 
