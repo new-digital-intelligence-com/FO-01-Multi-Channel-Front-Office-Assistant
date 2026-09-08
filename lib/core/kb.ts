@@ -84,9 +84,22 @@ function stem(w: string): string {
   return w.length > 5 ? w.slice(0, 5) : w;
 }
 
-function content(text: string): string[] {
+function tokens(text: string): string[] {
   const words: string[] = text.toLowerCase().match(/\p{L}+/gu) ?? [];
-  return words.filter((w) => !STOP.has(w)).map(stem);
+  return words.map(stem);
+}
+
+/**
+ * Content words, falling back to every word when a phrase is nothing but stopwords.
+ *
+ * "what do you do" is entirely stopwords, so stripping them left nothing to match and a
+ * question the knowledge base answers verbatim came back as not covered. Keeping the
+ * stopwords for those phrases costs nothing: they only match other stopword-only phrases.
+ */
+function content(text: string): string[] {
+  const all = tokens(text);
+  const stripped = all.filter((w) => !STOP.has(stem(w)) && !STOP.has(w));
+  return stripped.length > 0 ? stripped : all;
 }
 
 /**
