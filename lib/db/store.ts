@@ -46,6 +46,12 @@ export const CASE_COLUMNS = [
 ] as const;
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+/**
+ * The log is also written from Claude, which has no way to append to a Sheet — it rewrites
+ * the file and trashes the old one, so the id changes. Resolving by name survives that; the
+ * configured id is only the first guess.
+ */
+const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? "fo-01-log";
 
 // Two ways in, whichever you have. OAuth uses the client you already created in Google
 // Cloud plus a refresh token from `npm run google:auth`. The service account path needs no
@@ -59,24 +65,32 @@ const SA_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
 const useOAuth = Boolean(CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN);
 const useServiceAccount = Boolean(SA_EMAIL && SA_KEY);
-const configured = Boolean(SHEET_ID) && (useOAuth || useServiceAccount);
+const configured = Boolean(SHEET_ID || SHEET_NAME) && (useOAuth || useServiceAccount);
+
+function oauthClient() {
+  const oauth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+  oauth.setCredentials({ refresh_token: REFRESH_TOKEN });
+  return oauth;
+}
+
+function jwtClient() {
+  return new google.auth.JWT({
+    email: SA_EMAIL,
+    key: SA_KEY,
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive.metadata.readonly",
+    ],
+  });
+}
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 function sheets(): sheets_v4.Sheets {
   if (!sheetsClient) {
-    let auth;
-    if (useOAuth) {
-      const oauth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
-      oauth.setCredentials({ refresh_token: REFRESH_TOKEN });
-      auth = oauth;
-    } else {
-      auth = new google.auth.JWT({
-        email: SA_EMAIL,
-        key: SA_KEY,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-    }
-    sheetsClient = google.sheets({ version: "v4", auth });
+    sheetsClient = google.sheets({
+      version: "v4",
+      auth: useOAuth ? oauthClient() : jwtClient(),
+    });
   }
   return sheetsClient;
 }
@@ -121,23 +135,24 @@ const ensured = new Set<string>();
 async function ensureSheet(tab: string, cols: readonly string[]): Promise<void> {
   if (ensured.has(tab)) return;
   const api = sheets();
-  const meta = await api.spreadsheets.get({ spreadsheetId: SHEET_ID! });
+  const id = await sheetId();
+  const meta = await api.spreadsheets.get({ spreadsheetId: id });
   const exists = meta.data.sheets?.some((s) => s.properties?.title === tab);
 
   if (!exists) {
     await api.spreadsheets.batchUpdate({
-      spreadsheetId: SHEET_ID!,
+      spreadsheetId: id,
       requestBody: { requests: [{ addSheet: { properties: { title: tab } } }] },
     });
   }
 
   const head = await api.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID!,
+    spreadsheetId: id,
     range: `${tab}!A1:Z1`,
   });
   if (!head.data.values?.[0]?.length) {
     await api.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID!,
+      spreadsheetId: id,
       range: `${tab}!A1`,
       valueInputOption: "RAW",
       requestBody: { values: [cols as unknown as string[]] },
@@ -146,10 +161,57 @@ async function ensureSheet(tab: string, cols: readonly string[]): Promise<void> 
   ensured.add(tab);
 }
 
+/**
+ * The spreadsheet id to use right now.
+ *
+ * Tries the configured id, and falls back to a Drive lookup by name when it has gone —
+ * newest first, since a rewrite leaves the replacement as the most recently modified. Cached
+ * per process; a failed write clears it so the next call re-resolves.
+ */
+let resolvedId: string | null = null;
+
+async function sheetId(): Promise<string> {
+  if (resolvedId) return resolvedId;
+
+  if (SHEET_ID) {
+    try {
+      await sheets().spreadsheets.get({ spreadsheetId: SHEET_ID, fields: "spreadsheetId" });
+      resolvedId = SHEET_ID;
+      return resolvedId;
+    } catch {
+      // Deleted or replaced — fall through to the name lookup rather than failing.
+    }
+  }
+
+  const drive = google.drive({ version: "v3", auth: useOAuth ? oauthClient() : jwtClient() });
+  const res = await drive.files.list({
+    q: `name = '${SHEET_NAME.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`,
+    orderBy: "modifiedTime desc",
+    pageSize: 1,
+    fields: "files(id,name)",
+  });
+
+  const found = res.data.files?.[0]?.id;
+  if (!found) {
+    throw new Error(
+      `No spreadsheet named "${SHEET_NAME}" is reachable. Set GOOGLE_SHEET_ID, or ` +
+        `GOOGLE_SHEET_NAME if the log was renamed.`,
+    );
+  }
+  resolvedId = found;
+  return resolvedId;
+}
+
+/** Called when a write fails, so a replaced file is picked up on the next attempt. */
+function forgetSheetId() {
+  resolvedId = null;
+  ensured.clear();
+}
+
 async function append(tab: string, cols: readonly string[], obj: object) {
   await ensureSheet(tab, cols);
   await sheets().spreadsheets.values.append({
-    spreadsheetId: SHEET_ID!,
+    spreadsheetId: await sheetId(),
     range: `${tab}!A:A`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
@@ -160,7 +222,7 @@ async function append(tab: string, cols: readonly string[], obj: object) {
 async function readAll<T>(tab: string, cols: readonly string[]): Promise<T[]> {
   await ensureSheet(tab, cols);
   const res = await sheets().spreadsheets.values.get({
-    spreadsheetId: SHEET_ID!,
+    spreadsheetId: await sheetId(),
     range: `${tab}!A2:Z`,
   });
   return fromRows<T>((res.data.values as string[][]) ?? [], cols);

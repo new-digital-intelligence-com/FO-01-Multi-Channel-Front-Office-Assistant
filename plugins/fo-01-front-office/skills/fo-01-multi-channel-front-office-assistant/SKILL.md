@@ -120,16 +120,43 @@ a drafted reply as a sent one.
 
 Every interaction belongs in the record: inbound and outbound, including escalated ones.
 
-The log is a Google Sheet with two tabs, `interactions` and `cases`. Column order matters:
+The log is a Google Sheet named **`fo-01-log`** with two tabs. Column order is fixed:
 
 ```
 interactions: id, created_at, channel, direction, contact, body, intent, escalated
 cases:        id, created_at, contact, channel, team, reason, context, status
 ```
 
-Append there if a connected tool can write to Sheets. **If nothing can, say so** — name what
-you did and that it was not logged, and point at the console, which writes to the same sheet.
-Do not describe an unlogged interaction as recorded.
+### Appending with a Drive connector
+
+A Drive connector cannot append a row — `update_file` changes only the title and folder. So
+rewrite the file whole:
+
+1. **`search_files`** — `name = 'fo-01-log' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`. Take the newest.
+2. **`read_file_content`** on that id. Read what is there; never write a row without it.
+3. **Append your rows to the end.** Keep the header row and every existing row byte for byte.
+   `id` is any unique string, `created_at` is ISO 8601 UTC, `escalated` is `true` or `false`.
+4. **`create_file`** — title `fo-01-log`, `contentMimeType: "text/csv"`, `textContent` the
+   full sheet. Drive converts it to a Sheet.
+5. **`trash_file`** the old id, so only one `fo-01-log` remains.
+
+The console finds the log by name, not by id, so the replacement is picked up automatically.
+
+**Two rules that make this safe:**
+
+- **Never skip step 2.** Writing without reading destroys every row already there. If the
+  read fails, stop and say the log could not be updated — do not write a file containing only
+  your row.
+- **Do the swap in one go.** Between steps 4 and 5 there are two files called `fo-01-log`;
+  leaving it there means the next writer may pick the wrong one.
+
+If the rewrite is more than the moment warrants, say the interaction was not logged and point
+at the console — which appends a single row and never rewrites anything.
+
+### When nothing can write
+
+Say so. Name what you did and that it was not recorded. **Never describe an unlogged
+interaction as logged.**
 
 ## Channels
 

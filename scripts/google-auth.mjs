@@ -30,8 +30,7 @@ const url = client.generateAuthUrl({
   prompt: "consent", // force a refresh_token even if previously granted
   scope: [
     "https://www.googleapis.com/auth/spreadsheets",   // the interaction log
-    "https://www.googleapis.com/auth/gmail.readonly", // read inbound mail
-    "https://www.googleapis.com/auth/gmail.send",     // send replies
+    "https://www.googleapis.com/auth/drive.metadata.readonly", // find the log by name if it is replaced
     "https://www.googleapis.com/auth/chat.spaces.readonly",
     "https://www.googleapis.com/auth/chat.messages",
   ],

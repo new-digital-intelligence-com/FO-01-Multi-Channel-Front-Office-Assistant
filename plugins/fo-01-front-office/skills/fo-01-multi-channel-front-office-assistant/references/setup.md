@@ -10,14 +10,18 @@ there is no FO-01 server to add.
 |---|---|---|
 | Slack | the Slack connector, on the workspace with the FO-01 app | read and send in the front office channel |
 | Google Chat | a Google connector covering Chat | read and post in the front office space |
-| The log | a Google connector that can **write to Sheets** | append to the interaction log |
+| The log | a Google connector with Drive **create** and **trash** | rewrite the interaction log (see SKILL.md → Logging) |
 
 Add them in Claude: Settings → Connectors.
 
-**Check before promising.** Many Google connectors read Drive and create files but only
-update file *metadata* — title and folder. That cannot append a row to a Sheet, so logging
-may be unavailable even with Google connected. Look at the tools you actually have rather
-than assuming the capability from the connector's name.
+**Check before promising.** A Drive connector cannot append to a Sheet — `update_file`
+changes only the title and folder. Logging therefore means reading the whole log, adding your
+rows and writing the file back, then trashing the old one. That needs `search_files`,
+`read_file_content`, `create_file` and `trash_file`. If any of those is missing, logging is
+not available; say so rather than assuming the capability from the connector's name.
+
+The console resolves the log by **name**, so a replaced file is picked up automatically and a
+rewrite does not orphan it.
 
 ## Degrading honestly
 
@@ -25,7 +29,7 @@ than assuming the capability from the connector's name.
 |---|---|---|
 | Nothing | draft a reply, decide the routing | "drafted, not sent, not logged" |
 | Slack only | read and send in Slack | "sent; not logged — the console holds the record" |
-| Slack + Sheets-capable Google | the whole loop | nothing special |
+| Slack + Drive create/trash | the whole loop, logging by rewrite | nothing special |
 
 The failure mode to avoid is describing work as done when no tool ran. A draft is a draft
 until something sends it.

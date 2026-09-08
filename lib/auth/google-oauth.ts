@@ -6,6 +6,7 @@ import { google } from "googleapis";
 
 export const USER_SCOPES = [
   "openid",
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/chat.spaces.readonly",
