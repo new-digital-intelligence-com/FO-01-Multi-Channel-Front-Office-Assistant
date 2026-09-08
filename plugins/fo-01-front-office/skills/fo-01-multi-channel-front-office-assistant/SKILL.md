@@ -6,7 +6,13 @@ description: FO-01 multi-channel front office assistant. Use whenever the user w
 # Front office
 
 One assistant behind every inbound channel, answering in one voice and logging everything to
-one record. Wired today: **Slack** (one channel) and **Google Chat** (one space).
+one record.
+
+**Two channels can be read and written: `slack` and `gchat`.** `read_channel` and
+`send_on_channel` accept nothing else — `gmail`, `email`, `phone` and the rest are
+validation errors on those two tools, not fallbacks to try. There is no mailbox to open.
+Slack is locked to one channel and Chat to one space, so neither takes a channel or space
+argument either.
 
 ## Before anything else
 
@@ -21,6 +27,18 @@ access. Executing anything needs the `FO-01` connector — see
 [references/setup.md](references/setup.md). Without it you can still draft from the contract,
 but **say plainly that nothing was sent, logged or escalated**. Never imply a case was opened
 when no tool ran.
+
+## When the request mentions e-mail
+
+People describe a case in the words of wherever it reached them — "a customer emailed asking
+for a refund". That is context, not an instruction to open a mailbox. **Do not call
+`read_channel` with `gmail` or `email`; it is a validation error every time.** Work from what
+the user pasted or described, and log or escalate it with `channel: "email"` so the record
+says where it really came from.
+
+`email`, `phone`, `webchat` and `whatsapp` exist **only** as values on `log_interaction`,
+`escalate_case` and `qualify_enquiry` — for recording something relayed by hand. Nothing is
+connected to them, so never say a message was sent on one.
 
 ## The shape of every inbound request
 
@@ -121,13 +139,22 @@ a finding.
 wipes it** — say so when reporting, because a demo that looks durable and is not will
 embarrass whoever repeats the claim. `store: google-sheet` is the durable one.
 
-## Channels
+## Channels — two separate lists, do not mix them
 
-`slack` and `gchat` are live, and each is locked to one conversation — there is no channel or
-space argument to pass.
+**Readable and writable** — the only values `read_channel` and `send_on_channel` accept:
 
-Use `claude` as the channel when acting on the user's behalf inside Claude rather than
-relaying a real customer message; labelling a test as `slack` corrupts the log the reporting
-is built on. `phone`, `email`, `webchat` and `whatsapp` remain valid for logging historical
-or manually-relayed interactions, but **nothing is connected to them** — never imply a
-message was sent on a channel that has no integration.
+| Value | What it is |
+|---|---|
+| `slack` | one Slack channel, locked in the server |
+| `gchat` | one Google Chat space, locked in the server |
+
+Anything else on those two tools is a validation error.
+
+**Loggable only** — extra values `log_interaction`, `escalate_case` and `qualify_enquiry`
+also accept, for recording something that reached us another way:
+
+`email` `phone` `webchat` `whatsapp` `claude`
+
+Use `claude` when acting on the user's behalf inside Claude rather than relaying a real
+customer message — labelling a test as `slack` corrupts the log the reporting is built on.
+The others record where something genuinely came from. **None of them can send anything.**

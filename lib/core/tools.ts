@@ -259,9 +259,10 @@ TOOLS.push(
     name: "read_channel",
     title: "Read a channel",
     description:
-      "Fetch recent inbound messages from one channel: `gchat` (the front office Google Chat space) " +
-      "or `slack` (the front office Slack channel). Use to triage what has come in before replying. " +
-      "Each is confined to a single conversation — there is no channel or space to choose.",
+      "Fetch recent inbound messages from one channel. `channel` must be `slack` or `gchat` — " +
+      "those are the only connected channels, and there is no mailbox to read: `gmail` and `email` " +
+      "are validation errors, not fallbacks. Each channel is confined to a single conversation, so " +
+      "there is no channel or space to choose. Use to triage what has come in before replying.",
     schema: z.object({
       channel: z.enum(["gchat", "slack"]),
       limit: z.number().int().min(1).max(50).default(10),

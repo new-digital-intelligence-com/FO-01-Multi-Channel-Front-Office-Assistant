@@ -12,7 +12,7 @@ comes back as a clear error rather than a silent misfire.
 | `answer_faq` | `question` | Returns `covered` / `escalate` / `not_covered`. Respect the verdict — see the skill. |
 | `get_contact_history` | `contact?`, `limit` | Every channel in one timeline. Omit `contact` for all recent traffic. |
 | `list_open_cases` | `limit` | Escalations still waiting on a human, newest first. |
-| `read_channel` | `channel`, `limit` | `channel` is `slack` or `gchat`. **No channel or space argument** — each is locked to one conversation. |
+| `read_channel` | `channel`, `limit` | `channel` is **`slack` or `gchat` only** — any other value is a validation error, including `gmail` and `email`. No channel or space argument; each is locked to one conversation. |
 
 ## Writing
 
@@ -23,12 +23,13 @@ comes back as a clear error rather than a silent misfire.
 | `log_interaction` | `contact`, `channel`, `direction`, `body`, `intent?` | For anything a tool did not already log. |
 | `send_on_channel` | `channel`, `body`, `threadId?` | **Visible to real people, cannot be recalled — confirm the exact text first.** Logs what it sends, so do not also call `log_interaction`. |
 
-## Channel values
+## Channel values — two lists
 
-`slack` `gchat` `claude` `phone` `email` `webchat` `whatsapp`
+`read_channel` and `send_on_channel` accept **`slack` and `gchat`, nothing else.**
 
-Only `slack` and `gchat` have an integration. The rest are for logging historical or
-manually-relayed interactions — never imply a message was sent on one of them.
+`log_interaction`, `escalate_case` and `qualify_enquiry` additionally accept `claude`,
+`email`, `phone`, `webchat` and `whatsapp`, for recording something that reached us another
+way. None of those can send or read anything — never imply a message went out on one.
 
 ## What the results carry
 
