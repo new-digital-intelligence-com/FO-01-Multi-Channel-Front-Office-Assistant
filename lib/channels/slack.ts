@@ -11,6 +11,12 @@
 const TOKEN = process.env.SLACK_BOT_TOKEN;
 /** The only channel this app may ever touch. */
 export const ALLOWED_CHANNEL = process.env.SLACK_CHANNEL ?? "ai-employee-fo-01-multi-channel-front-office-assistant";
+/**
+ * Pinning the id means the channel is never looked up, so no other channel is read even as
+ * metadata. Without it the name has to be resolved by listing conversations, which reads
+ * every channel the bot can see.
+ */
+const ALLOWED_CHANNEL_ID = process.env.SLACK_CHANNEL_ID;
 
 export const slackConfigured = Boolean(TOKEN);
 
@@ -78,8 +84,11 @@ export async function resolveChannel(name?: string): Promise<string> {
         `This is a hard restriction, not a preference.`,
     );
   }
+  if (ALLOWED_CHANNEL_ID) return ALLOWED_CHANNEL_ID;
   if (channelIdCache) return channelIdCache;
 
+  // Falling back to a lookup. This enumerates channels the bot can see — set
+  // SLACK_CHANNEL_ID to avoid it entirely.
   let cursor: string | undefined;
   do {
     const res = await api("conversations.list", {
